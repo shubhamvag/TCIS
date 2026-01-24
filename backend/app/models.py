@@ -1,0 +1,271 @@
+"""
+SQLAlchemy ORM Models for TCIS.
+
+Entities:
+- Lead: Prospective customers interested in Tally/MIS/HRMS products
+- Client: Existing customers with installed products
+- AutomationPack: Add-on modules that can be sold to clients
+- Ticket: Support issues raised by clients
+- ClientAutomation: Junction table tracking which packs a client has installed
+
+Business Justification for Key Fields:
+- sector: Used in scoring (manufacturing > trading > services for lead priority)
+- size: Company size affects both lead scoring and upsell potential
+- source: Lead source influences conversion probability (referral > cold)
+- existing_products: Determines upsell recommendations (fewer products = more potential)
+- issue_type: Ticket patterns suggest which automation packs to recommend
+"""
+from datetime import datetime, date
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Enum
+from sqlalchemy.orm import relationship
+import enum
+
+from .database import Base
+
+
+# ============================================================
+# ENUMS - Define allowed values for categorical fields
+# ============================================================
+
+class SectorEnum(str, enum.Enum):
+    """Business sector classification. Affects scoring weights."""
+    MANUFACTURING = "manufacturing"
+    TRADING = "trading"
+    SERVICES = "services"
+
+
+class CompanySizeEnum(str, enum.Enum):
+    """Company size bands. Affects both scoring and pricing."""
+    SMALL = "small"       # < 20 employees
+    MEDIUM = "medium"     # 20-100 employees
+    LARGE = "large"       # > 100 employees
+
+
+class LeadSourceEnum(str, enum.Enum):
+    """
+    How the lead was acquired.
+    Scoring: referral=1.0, partner=0.8, indiamart=0.6, justdial=0.5, website=0.4, cold=0.3
+    """
+    REFERRAL = "referral"
+    PARTNER = "partner"
+    INDIAMART = "indiamart"
+    JUSTDIAL = "justdial"
+    WEBSITE = "website"
+    COLD = "cold"
+
+
+class LeadStatusEnum(str, enum.Enum):
+    """Lead pipeline status."""
+    NEW = "new"
+    CONTACTED = "contacted"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    NEGOTIATION = "negotiation"
+    WON = "won"
+    LOST = "lost"
+
+
+class TicketTypeEnum(str, enum.Enum):
+    """
+    Issue category for support tickets.
+    Used to detect patterns and recommend relevant automation packs.
+    """
+    GST = "gst"             # GST filing/compliance issues → recommend GST Health Pack
+    INVENTORY = "inventory" # Stock/inventory issues → recommend Inventory Alert Pack
+    REPORT = "report"       # Reporting inadequacy → recommend F-1 MIS Pack
+    PERFORMANCE = "performance"  # System slowness
+    TRAINING = "training"   # User training needs
+
+
+class TicketSeverityEnum(str, enum.Enum):
+    """Ticket urgency level. Affects risk scoring."""
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class TicketStatusEnum(str, enum.Enum):
+    """Ticket resolution status."""
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+
+# ============================================================
+# ORM MODELS
+# ============================================================
+
+class Lead(Base):
+    """
+    Prospective customer who has shown interest in Metavision products.
+    
+    Scoring uses: sector, size, source, interested_modules, last_contact_date
+    """
+    __tablename__ = "leads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Contact information
+    name = Column(String(100), nullable=False)
+    company = Column(String(150), nullable=False)
+    email = Column(String(100))
+    phone = Column(String(20))
+    
+    # Classification (used in scoring)
+    sector = Column(String(20), default=SectorEnum.SERVICES.value)
+    size = Column(String(20), default=CompanySizeEnum.SMALL.value)
+    source = Column(String(20), default=LeadSourceEnum.COLD.value)
+    
+    # Interest tracking
+    interested_modules = Column(String(200))  # Comma-separated: "tally,mis,hrms,inventory,gst"
+    
+    # Timeline
+    last_contact_date = Column(Date)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Status
+    status = Column(String(20), default=LeadStatusEnum.NEW.value)
+    notes = Column(Text)
+
+    def __repr__(self):
+        return f"<Lead {self.company} - {self.name}>"
+
+
+class Client(Base):
+    """
+    Existing customer with installed Metavision products.
+    
+    Upsell scoring uses: existing_products, last_project_date, sector, size
+    Risk scoring uses: related tickets
+    """
+    __tablename__ = "clients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Business information
+    name = Column(String(100), nullable=False)  # Primary contact name
+    company = Column(String(150), nullable=False)
+    email = Column(String(100))
+    phone = Column(String(20))
+    
+    # Classification
+    sector = Column(String(20), default=SectorEnum.SERVICES.value)
+    size = Column(String(20), default=CompanySizeEnum.SMALL.value)
+    
+    # Products and revenue
+    existing_products = Column(String(200))  # Comma-separated: "tallyprime,f1_mis,hrms"
+    annual_revenue_band = Column(String(20))  # Revenue FROM Metavision: "0-50k", "50k-2L", "2L-5L", "5L+"
+    
+    # Relationship tracking
+    start_date = Column(Date)  # When they became a client
+    last_project_date = Column(Date)  # Last purchase/implementation
+    account_manager = Column(String(100))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(Text)
+
+    # Relationships
+    tickets = relationship("Ticket", back_populates="client")
+    installed_packs = relationship("ClientAutomation", back_populates="client")
+
+    def __repr__(self):
+        return f"<Client {self.company}>"
+
+
+class AutomationPack(Base):
+    """
+    Add-on module/solution that can be sold to existing clients.
+    
+    Examples:
+    - GST Health Pack: Automated GST reconciliation and health checks
+    - Inventory Alert Pack: Stock alerts, reorder notifications
+    - F-1 MIS Executive Reporting Pack: Custom executive dashboards
+    - Owner Insight Pack: Business owner mobile alerts
+    - Receivable Control Pack: AR aging alerts and follow-ups
+    """
+    __tablename__ = "automation_packs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    name = Column(String(100), nullable=False)
+    code = Column(String(20), unique=True, nullable=False)  # Short code: "GST_HEALTH"
+    description = Column(Text)
+    
+    # Targeting criteria (used in recommendation logic)
+    target_sectors = Column(String(100))  # Comma-separated sectors this pack suits
+    required_existing_products = Column(String(200))  # Products client must have for this pack
+    
+    # Pricing
+    price_band = Column(String(20))  # "10k-25k", "25k-50k", "50k-1L", "1L+"
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Integer, default=1)  # 1=active, 0=discontinued
+
+    # Relationships
+    installations = relationship("ClientAutomation", back_populates="pack")
+
+    def __repr__(self):
+        return f"<AutomationPack {self.code}>"
+
+
+class Ticket(Base):
+    """
+    Support issue raised by a client.
+    
+    Used in:
+    - Risk scoring: Many tickets or long resolution times = high risk
+    - Pack recommendations: Ticket patterns suggest needs (GST issues → GST pack)
+    """
+    __tablename__ = "tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    
+    # Issue details
+    issue_type = Column(String(20), default=TicketTypeEnum.TRAINING.value)
+    severity = Column(String(20), default=TicketSeverityEnum.MEDIUM.value)
+    subject = Column(String(200), nullable=False)
+    description = Column(Text)
+    
+    # Timeline
+    created_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime)
+    
+    # Status
+    status = Column(String(20), default=TicketStatusEnum.OPEN.value)
+    resolution_notes = Column(Text)
+
+    # Relationships
+    client = relationship("Client", back_populates="tickets")
+
+    def __repr__(self):
+        return f"<Ticket {self.id} - {self.subject[:30]}>"
+
+
+class ClientAutomation(Base):
+    """
+    Junction table: Tracks which automation packs a client has installed.
+    
+    Used to:
+    - Filter out already-installed packs from recommendations
+    - Count installations per pack for popularity metrics
+    """
+    __tablename__ = "client_automations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    pack_id = Column(Integer, ForeignKey("automation_packs.id"), nullable=False)
+    
+    installed_date = Column(Date)
+    notes = Column(Text)
+
+    # Relationships
+    client = relationship("Client", back_populates="installed_packs")
+    pack = relationship("AutomationPack", back_populates="installations")
+
+    def __repr__(self):
+        return f"<ClientAutomation client={self.client_id} pack={self.pack_id}>"
