@@ -154,13 +154,24 @@ if st.session_state.active_module == "STRATEGY ROOM":
             df_leads = pd.DataFrame(leads); df_leads["Type"] = "LEAD"
             df_cl = pd.DataFrame(clients); df_cl["Type"] = "CLIENT"
             combined = pd.concat([df_leads, df_cl])
-            fig = px.scatter(combined, x="sector", y="company", color="Type", size="id", template="plotly_dark", height=500)
+            fig = px.scatter(combined, x="sector", y="company", color="Type", size="lead_score" if "lead_score" in combined else None, 
+                             hover_name="company", template="plotly_dark", height=500,
+                             color_discrete_map={"LEAD": "#60a5fa", "CLIENT": "#c084fc"})
             st.plotly_chart(fig, use_container_width=True)
     with c2:
-        st.markdown("### Decision Controls")
-        st.info("Direct access to precision targeting enabled in Portfolio view.")
-        st.write("Current Focus: **Manufacturing Expansion**")
-        st.progress(0.74, text="Sector Goal: 74% Reach")
+        st.markdown("### Strategic Growth Simulator")
+        st.write("Project potential revenue impact by increasing lead conversion efficiency.")
+        conv_rate = st.slider("Target Conversion Rate (%)", 5, 50, 15)
+        avg_deal = st.number_input("Average Deal Value (INR)", 10000, 500000, 45000)
+        
+        if leads:
+            potential_rev = len(leads) * (conv_rate / 100) * avg_deal
+            st.metric("Projected Growth", f"INR {potential_rev/100000:.2f}L", f"+{conv_rate}% Efficiency")
+            st.progress(conv_rate/100)
+        
+        st.markdown("---")
+        st.markdown("**Intelligence Brief**")
+        st.info("Primary growth vector identified in **Manufacturing Sector** modules.")
 
 # ------------------------------------------------------------
 # MODULE: LEADS PIPELINE
