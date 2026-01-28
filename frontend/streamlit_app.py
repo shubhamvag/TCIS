@@ -121,8 +121,8 @@ with cols_h[1]:
         st.session_state.active_module = "CLIENT GROWTH"; st.rerun()
     if n4.button("PORTFOLIO MODULES", use_container_width=True, type="primary" if st.session_state.active_module == "PORTFOLIO MODULES" else "secondary"):
         st.session_state.active_module = "PORTFOLIO MODULES"; st.rerun()
-    if n5.button("SYSTEM HEALTH", use_container_width=True, type="primary" if st.session_state.active_module == "SYSTEM HEALTH" else "secondary"):
-        st.session_state.active_module = "SYSTEM HEALTH"; st.rerun()
+    if n5.button("QUANTUM FIELD", use_container_width=True, type="primary" if st.session_state.active_module == "QUANTUM FIELD" else "secondary"):
+        st.session_state.active_module = "QUANTUM FIELD"; st.rerun()
 
 st.divider()
 
@@ -232,9 +232,47 @@ elif st.session_state.active_module == "PORTFOLIO MODULES":
                     st.metric("Current Adoption", p['installation_count'])
 
 # ------------------------------------------------------------
+# MODULE: QUANTUM FIELD (OUT-OF-THE-BOX INTEGRATION)
+# ------------------------------------------------------------
+elif st.session_state.active_module == "QUANTUM FIELD":
+    st.subheader("Anti-Gravity Dynamics & Market Displacement")
+    
+    # Load Unified Intelligence Data
+    import json, os
+    correlation_path = "../.tmp/correlation_matrix.json"
+    forecast_path = "../.tmp/forecast_24m.json"
+    
+    if os.path.exists(correlation_path):
+        with open(correlation_path, "r") as f:
+            correlations = json.load(f)
+        
+        df_corr = pd.DataFrame(correlations)
+        
+        q1, q2, q3 = st.columns(3)
+        q1.metric("Market Displacement Index", f"{df_corr['mdi_index'].max():.2f}", "Peak Value")
+        q2.metric("Quantum Zones Identified", f"{len(df_corr[df_corr['status'] == 'QUANTUM_ZONE'])}")
+        
+        if os.path.exists(forecast_path):
+            with open(forecast_path, "r") as f:
+                forecast = json.load(f)
+            q3.metric("24m Stability Risk", f"{forecast['risk_assessment']['stability_score']}%", "SAFE")
+
+        st.markdown("### Strategic Displacement Map (Pune Sector)")
+        # Simple Bubble Chart for MDI
+        fig = px.scatter(df_corr, x="anom_vector", y="score", size="mdi_index", color="status",
+                         hover_name="name", title="Business Potential vs. Gravimetric Anomaly",
+                         template="plotly_dark", color_discrete_map={"QUANTUM_ZONE": "#f472b6", "STANDARD": "#3b82f6"})
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.markdown("### Quantum Priority Targets")
+        st.dataframe(df_corr[df_corr["status"] == "QUANTUM_ZONE"], use_container_width=True, hide_index=True)
+    else:
+        st.warning("Unified Intelligence Matrix not found. Please run the orchestration pipeline.")
+
+# ------------------------------------------------------------
 # MODULE: SYSTEM HEALTH
 # ------------------------------------------------------------
-elif st.session_state.active_module == "SYSTEM HEALTH":
+else: # Default/Fallback to System Health
     st.subheader("Operational Handshake Diagnostics")
     health = api_get("/health")
     if health:
@@ -249,4 +287,4 @@ elif st.session_state.active_module == "SYSTEM HEALTH":
             st.json(weights_db)
 
 st.sidebar.caption("TCIS v2.0 | ENTERPRISE BUILD")
-st.sidebar.caption("STATUS: READY")
+st.sidebar.caption("STATUS: QUANTUM-READY")

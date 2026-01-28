@@ -37,3 +37,7 @@ ENV/
 # TCIS Specific
 # Note: Keeping tcis.db as it contains the seeded sample data for the project demo
 # !backend/tcis.db
+.tmp/
+*.json
+!directives/*.json
+!execution/*.json

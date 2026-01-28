@@ -1,0 +1,169 @@
+{
+  "metadata": {
+    "alt": 500,
+    "resolution": 5,
+    "units": "Joules/m^3 equivalent"
+  },
+  "grid": [
+    [
+      {
+        "lat": 18.5,
+        "lon": 73.8,
+        "potential": 128.05,
+        "is_stable": false
+      },
+      {
+        "lat": 18.5,
+        "lon": 73.825,
+        "potential": 382.77,
+        "is_stable": false
+      },
+      {
+        "lat": 18.5,
+        "lon": 73.85,
+        "potential": 309.19,
+        "is_stable": false
+      },
+      {
+        "lat": 18.5,
+        "lon": 73.875,
+        "potential": 435.2,
+        "is_stable": true
+      },
+      {
+        "lat": 18.5,
+        "lon": 73.9,
+        "potential": 35.85,
+        "is_stable": false
+      }
+    ],
+    [
+      {
+        "lat": 18.525,
+        "lon": 73.8,
+        "potential": 433.98,
+        "is_stable": true
+      },
+      {
+        "lat": 18.525,
+        "lon": 73.825,
+        "potential": 396.89,
+        "is_stable": true
+      },
+      {
+        "lat": 18.525,
+        "lon": 73.85,
+        "potential": 336.83,
+        "is_stable": false
+      },
+      {
+        "lat": 18.525,
+        "lon": 73.875,
+        "potential": 67.7,
+        "is_stable": false
+      },
+      {
+        "lat": 18.525,
+        "lon": 73.9,
+        "potential": 187.76,
+        "is_stable": false
+      }
+    ],
+    [
+      {
+        "lat": 18.55,
+        "lon": 73.8,
+        "potential": 249.82,
+        "is_stable": false
+      },
+      {
+        "lat": 18.55,
+        "lon": 73.825,
+        "potential": 221.93,
+        "is_stable": false
+      },
+      {
+        "lat": 18.55,
+        "lon": 73.85,
+        "potential": 477.63,
+        "is_stable": true
+      },
+      {
+        "lat": 18.55,
+        "lon": 73.875,
+        "potential": 94.84,
+        "is_stable": false
+      },
+      {
+        "lat": 18.55,
+        "lon": 73.9,
+        "potential": 328.52,
+        "is_stable": false
+      }
+    ],
+    [
+      {
+        "lat": 18.575,
+        "lon": 73.8,
+        "potential": 461.73,
+        "is_stable": true
+      },
+      {
+        "lat": 18.575,
+        "lon": 73.825,
+        "potential": 43.06,
+        "is_stable": false
+      },
+      {
+        "lat": 18.575,
+        "lon": 73.85,
+        "potential": 259.94,
+        "is_stable": false
+      },
+      {
+        "lat": 18.575,
+        "lon": 73.875,
+        "potential": 209.12,
+        "is_stable": false
+      },
+      {
+        "lat": 18.575,
+        "lon": 73.9,
+        "potential": 477.13,
+        "is_stable": true
+      }
+    ],
+    [
+      {
+        "lat": 18.6,
+        "lon": 73.8,
+        "potential": 71.81,
+        "is_stable": false
+      },
+      {
+        "lat": 18.6,
+        "lon": 73.825,
+        "potential": 185.63,
+        "is_stable": false
+      },
+      {
+        "lat": 18.6,
+        "lon": 73.85,
+        "potential": 318.0,
+        "is_stable": false
+      },
+      {
+        "lat": 18.6,
+        "lon": 73.875,
+        "potential": 177.57,
+        "is_stable": false
+      },
+      {
+        "lat": 18.6,
+        "lon": 73.9,
+        "potential": 362.08,
+        "is_stable": false
+      }
+    ]
+  ]
+}

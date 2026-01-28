@@ -1,0 +1,20 @@
+{
+  "forecast": {
+    "horizon_months": 24,
+    "mean_magnitude": 0.05788,
+    "credible_interval_95": [
+      0.046765,
+      0.068995
+    ],
+    "growth_rate_annual": 6.5,
+    "unit": "m/s^2 equivalent"
+  },
+  "risk_assessment": {
+    "stability_score": 2.02,
+    "intervention_required": "NO"
+  },
+  "physics_constraints": {
+    "causality_preserved": true,
+    "entanglement_entropy": "SAFE"
+  }
+}

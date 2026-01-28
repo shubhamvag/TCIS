@@ -1,0 +1,28 @@
+{
+  "status": "VALIDATED",
+  "coordinates": {
+    "lat": 18.5,
+    "lon": 73.8,
+    "alt": 500.0
+  },
+  "metrics": {
+    "newtonian_component": 9.805111,
+    "anomalous_vector": 0.051221,
+    "total_field": 9.856332
+  },
+  "tensor_analysis": {
+    "ricci_scalar": 1.96102e-05,
+    "rank": 4
+  },
+  "resonance": {
+    "primary_hz": 15.27,
+    "harmonics": [
+      14.48,
+      14.11
+    ]
+  },
+  "verification": {
+    "energy_conservation": "\u0394E/E < 1e-9",
+    "causality": "PASS"
+  }
+}
