@@ -6,8 +6,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# SQLite database file in backend directory
-SQLALCHEMY_DATABASE_URL = "sqlite:///./tcis.db"
+import os
+
+# SQLite database file in backend directory (absolute path)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "tcis.db")
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 # Create engine with SQLite-specific settings
 engine = create_engine(

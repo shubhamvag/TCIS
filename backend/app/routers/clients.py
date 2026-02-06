@@ -113,3 +113,51 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     db.delete(client)
     db.commit()
     return None
+@router.get("/{client_id}/hierarchy")
+def get_client_hierarchy(client_id: int, db: Session = Depends(get_db)):
+    """
+    Get the deep structural intelligence (parent, siblings, group metrics).
+    """
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Root Parent Detection
+    root_client = client
+    while root_client.parent_id:
+        parent = db.query(Client).filter(Client.id == root_client.parent_id).first()
+        if not parent: break
+        root_client = parent
+
+    # Syblings Detection (Other children of the same parent)
+    siblings = []
+    if client.parent_id:
+        siblings = [
+            {"id": s.id, "company": s.company, "location": f"{s.city}, {s.region}"}
+            for s in db.query(Client).filter(Client.parent_id == client.parent_id, Client.id != client_id).all()
+        ]
+
+    # Recursive Tree Builder
+    def build_tree(c):
+        return {
+            "id": c.id,
+            "company": c.company,
+            "city": c.city,
+            "region": c.region,
+            "is_current": c.id == client_id,
+            "sub_branches": [build_tree(sub) for sub in c.sub_branches]
+        }
+
+    return {
+        "focus_client_id": client_id,
+        "parent": {
+            "id": root_client.id, 
+            "company": root_client.company
+        } if root_client.id != client_id else None,
+        "siblings": siblings,
+        "tree": build_tree(root_client),
+        "group_metrics": {
+            "total_branches": len(root_client.sub_branches),
+            "primary_region": root_client.region
+        }
+    }

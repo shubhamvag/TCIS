@@ -19,7 +19,10 @@ import random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import SessionLocal, engine, Base
-from app.models import Lead, Client, AutomationPack, Ticket, ClientAutomation
+from app.models import (
+    Lead, Client, AutomationPack, Ticket, ClientAutomation, 
+    ScoringConfig, ScoreHistory
+)
 
 
 # ============================================================
@@ -37,6 +40,28 @@ INDIAN_COMPANY_NAMES = [
     "Goyal Paper Mills", "Thakur Construction", "Nair Exports",
     "Iyer Software Services", "Pillai Traders", "Choudhary Motors",
     "Bhalla Machinery", "Sethi Marble Works", "Dhawan Logistics"
+]
+
+INDIAN_CITIES = [
+    ("Mumbai", "Maharashtra", "West"), 
+    ("Pune", "Maharashtra", "West"), 
+    ("Ahmedabad", "Gujarat", "West"),
+    ("Surat", "Gujarat", "West"),
+    ("Delhi", "Delhi", "North"), 
+    ("Gurgaon", "Haryana", "North"), 
+    ("Chandigarh", "Punjab", "North"),
+    ("Jaipur", "Rajasthan", "North"),
+    ("Bangalore", "Karnataka", "South"), 
+    ("Chennai", "Tamil Nadu", "South"), 
+    ("Hyderabad", "Telangana", "South"),
+    ("Kochi", "Kerala", "South"),
+    ("Kolkata", "West Bengal", "East"), 
+    ("Bhubaneswar", "Odisha", "East"), 
+    ("Jamshedpur", "Jharkhand", "East"),
+    ("Indore", "Madhya Pradesh", "Central"), 
+    ("Bhopal", "Madhya Pradesh", "Central"), 
+    ("Raipur", "Chhattisgarh", "Central"),
+    ("Nagpur", "Maharashtra", "Central")
 ]
 
 INDIAN_FIRST_NAMES = [
@@ -80,6 +105,36 @@ def random_date_in_range(start_days_ago: int, end_days_ago: int) -> date:
     """Generate random date in given range (days ago from today)."""
     days = random.randint(end_days_ago, start_days_ago)
     return date.today() - timedelta(days=days)
+
+
+def seed_scoring_configs(db):
+    """Seed initial scoring weights."""
+    print("Seeding scoring configs...")
+    
+    configs = [
+        # Sectors
+        {"key": "sector_manufacturing", "value": 1.0, "category": "sector", "label": "Manufacturing Weight"},
+        {"key": "sector_trading", "value": 0.7, "category": "sector", "label": "Trading Weight"},
+        {"key": "sector_services", "value": 0.5, "category": "sector", "label": "Services Weight"},
+        # Sizes
+        {"key": "size_large", "value": 1.0, "category": "size", "label": "Large Company Weight"},
+        {"key": "size_medium", "value": 0.7, "category": "size", "label": "Medium Company Weight"},
+        {"key": "size_small", "value": 0.4, "category": "size", "label": "Small Company Weight"},
+        # Sources
+        {"key": "source_referral", "value": 1.0, "category": "source", "label": "Referral Source Weight"},
+        {"key": "source_partner", "value": 0.8, "category": "source", "label": "Partner Source Weight"},
+        {"key": "source_indiamart", "value": 0.6, "category": "source", "label": "IndiaMart Source Weight"},
+        {"key": "source_justdial", "value": 0.5, "category": "source", "label": "JustDial Source Weight"},
+        {"key": "source_website", "value": 0.4, "category": "source", "label": "Website Source Weight"},
+        {"key": "source_cold", "value": 0.3, "category": "source", "label": "Cold Outreach Weight"},
+    ]
+    
+    for cfg_data in configs:
+        cfg = ScoringConfig(**cfg_data)
+        db.merge(cfg)  # merge handles existing keys
+    
+    db.commit()
+    print(f"  ✓ Created {len(configs)} scoring configurations")
 
 
 def seed_automation_packs(db):
@@ -162,7 +217,7 @@ def seed_automation_packs(db):
 
 
 def seed_leads(db):
-    """Seed 25 leads."""
+    """Seed 25 leads with Geo data."""
     print("Seeding leads...")
     
     leads_created = 0
@@ -170,6 +225,7 @@ def seed_leads(db):
     
     for company in companies_used:
         name = f"{random.choice(INDIAN_FIRST_NAMES)} {random.choice(INDIAN_LAST_NAMES)}"
+        city, state, region = random.choice(INDIAN_CITIES)
         
         # Weight towards cold/indiamart sources (realistic for B2B)
         source = random.choices(
@@ -189,10 +245,13 @@ def seed_leads(db):
             sector=random.choice(SECTORS),
             size=random.choices(SIZES, weights=[0.5, 0.35, 0.15])[0],
             source=source,
+            city=city,
+            state=state,
+            region=region,
             interested_modules=interested,
             last_contact_date=random_date_in_range(90, 1) if random.random() > 0.2 else None,
             status=random.choice(LEAD_STATUSES),
-            notes=f"Interested in Tally automation. Contact via {source}."
+            notes=f"Interested in Tally automation. Located in {city}, {state} ({region})."
         )
         db.add(lead)
         leads_created += 1
@@ -202,15 +261,17 @@ def seed_leads(db):
 
 
 def seed_clients(db):
-    """Seed 25 clients."""
+    """Seed 25 clients with Geo data and Hierarchy."""
     print("Seeding clients...")
     
     clients_created = 0
     # Use different companies than leads
     companies_used = random.sample(INDIAN_COMPANY_NAMES, 25)
     
+    created_clients = []
     for company in companies_used:
         name = f"{random.choice(INDIAN_FIRST_NAMES)} {random.choice(INDIAN_LAST_NAMES)}"
+        city, state, region = random.choice(INDIAN_CITIES)
         
         # All clients have TallyPrime, some have more
         base_products = ["tallyprime"]
@@ -226,18 +287,34 @@ def seed_clients(db):
             phone=random_phone(),
             sector=random.choice(SECTORS),
             size=random.choices(SIZES, weights=[0.4, 0.4, 0.2])[0],
+            city=city,
+            state=state,
+            region=region,
             existing_products=",".join(base_products),
             annual_revenue_band=random.choice(REVENUE_BANDS),
             start_date=random_date_in_range(730, 90),  # 2 years to 3 months ago
             last_project_date=random_date_in_range(365, 30),  # 1 year to 1 month ago
             account_manager=random.choice(ACCOUNT_MANAGERS),
-            notes=f"Long-term client. Primary contact: {name}."
+            notes=f"Long-term client in {city}, {state}. Primary contact: {name}."
         )
         db.add(client)
+        created_clients.append(client)
         clients_created += 1
     
     db.commit()
-    print(f"  ✓ Created {clients_created} clients")
+    
+    # Establish some Hierarchies (Branches)
+    print("  Creating hierarchies...")
+    potential_parents = [c for c in created_clients if c.size == "large"]
+    for i in range(len(created_clients)):
+        if random.random() > 0.8 and potential_parents:
+            parent = random.choice(potential_parents)
+            if parent.id != created_clients[i].id:
+                created_clients[i].parent_id = parent.id
+                created_clients[i].company = f"{parent.company} - {created_clients[i].city} Branch"
+    
+    db.commit()
+    print(f"  ✓ Created {clients_created} clients with hierarchies")
 
 
 def seed_tickets(db):
@@ -358,6 +435,7 @@ def main():
     
     # Create tables
     print("\nCreating database tables...")
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     print("  ✓ Tables created")
     
@@ -365,18 +443,9 @@ def main():
     db = SessionLocal()
     
     try:
-        # Clear existing data
-        print("\nClearing existing data...")
-        db.query(ClientAutomation).delete()
-        db.query(Ticket).delete()
-        db.query(Client).delete()
-        db.query(Lead).delete()
-        db.query(AutomationPack).delete()
-        db.commit()
-        print("  ✓ Existing data cleared")
-        
         # Seed in order
         print("\nSeeding data...")
+        seed_scoring_configs(db)
         seed_automation_packs(db)
         seed_leads(db)
         seed_clients(db)

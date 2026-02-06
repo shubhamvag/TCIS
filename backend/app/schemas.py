@@ -22,6 +22,8 @@ class LeadBase(BaseModel):
     sector: str = Field("services", description="manufacturing/trading/services")
     size: str = Field("small", description="small/medium/large")
     source: str = Field("cold", description="referral/partner/indiamart/justdial/website/cold")
+    city: Optional[str] = None
+    region: Optional[str] = None
     interested_modules: Optional[str] = Field(None, description="Comma-separated: tally,mis,hrms,inventory,gst")
     last_contact_date: Optional[date] = None
     status: str = Field("new", description="new/contacted/qualified/proposal/negotiation/won/lost")
@@ -42,6 +44,8 @@ class LeadUpdate(BaseModel):
     sector: Optional[str] = None
     size: Optional[str] = None
     source: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
     interested_modules: Optional[str] = None
     last_contact_date: Optional[date] = None
     status: Optional[str] = None
@@ -71,10 +75,13 @@ class ClientBase(BaseModel):
     """Base fields for client operations."""
     name: str = Field(..., max_length=100, description="Primary contact name")
     company: str = Field(..., max_length=150, description="Company name")
+    parent_id: Optional[int] = None
     email: Optional[str] = Field(None, max_length=100)
     phone: Optional[str] = Field(None, max_length=20)
     sector: str = Field("services")
     size: str = Field("small")
+    city: Optional[str] = None
+    region: Optional[str] = None
     existing_products: Optional[str] = Field(None, description="Comma-separated: tallyprime,f1_mis,hrms,inventory,gst")
     annual_revenue_band: Optional[str] = Field(None, description="0-50k/50k-2L/2L-5L/5L+")
     start_date: Optional[date] = None
@@ -92,10 +99,13 @@ class ClientUpdate(BaseModel):
     """Schema for updating a client. All fields optional."""
     name: Optional[str] = None
     company: Optional[str] = None
+    parent_id: Optional[int] = None
     email: Optional[str] = None
     phone: Optional[str] = None
     sector: Optional[str] = None
     size: Optional[str] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
     existing_products: Optional[str] = None
     annual_revenue_band: Optional[str] = None
     start_date: Optional[date] = None
@@ -119,6 +129,41 @@ class ClientWithScore(ClientResponse):
     recommended_packs: List[str] = Field(default_factory=list, description="Suggested automation pack codes")
     risk_score: float = Field(..., description="Support risk score (0-100)")
     risk_flag: Optional[str] = Field(None, description="High support load / Training needed / None")
+
+
+# ============================================================
+# NEW V2 SCHEMAS
+# ============================================================
+
+class ScoringConfigBase(BaseModel):
+    """Base schema for dynamic scoring weights."""
+    key: str
+    value: float
+    category: Optional[str] = None
+    label: Optional[str] = None
+
+
+class ScoringConfigUpdate(BaseModel):
+    """Schema for updating a weight."""
+    value: float
+
+
+class ScoringConfigResponse(ScoringConfigBase):
+    """Schema for weight responses."""
+    class Config:
+        from_attributes = True
+
+
+class ScoreHistoryResponse(BaseModel):
+    """Schema for historical score log entries."""
+    id: int
+    entity_id: int
+    entity_type: str
+    score: float
+    recorded_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # ============================================================

@@ -8,8 +8,7 @@ env/
 build/
 develop-eggs/
 dist/
-downloads/
-eggs/
+downloads/eggs/
 .eggs/
 lib/
 lib64/
@@ -34,10 +33,18 @@ ENV/
 # Streamlit
 .streamlit/
 
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.env.local
+
+# Vite/React
+dist/
+build_error.log
+
 # TCIS Specific
 # Note: Keeping tcis.db as it contains the seeded sample data for the project demo
 # !backend/tcis.db
-.tmp/
-*.json
-!directives/*.json
-!execution/*.json
+# Ignore root db if created by accident
+/tcis.db

@@ -17,7 +17,7 @@ Business Justification for Key Fields:
 """
 from datetime import datetime, date
 from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Text, Enum
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 import enum
 
 from .database import Base
@@ -118,6 +118,11 @@ class Lead(Base):
     size = Column(String(20), default=CompanySizeEnum.SMALL.value)
     source = Column(String(20), default=LeadSourceEnum.COLD.value)
     
+    # Geographic data (V2)
+    city = Column(String(50))
+    region = Column(String(20))  # e.g., North, South, East, West
+    state = Column(String(50))   # e.g., Maharashtra, Karnataka
+    
     # Interest tracking
     interested_modules = Column(String(200))  # Comma-separated: "tally,mis,hrms,inventory,gst"
     
@@ -144,6 +149,9 @@ class Client(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     
+    # Hierarchy (V2)
+    parent_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    
     # Business information
     name = Column(String(100), nullable=False)  # Primary contact name
     company = Column(String(150), nullable=False)
@@ -153,6 +161,11 @@ class Client(Base):
     # Classification
     sector = Column(String(20), default=SectorEnum.SERVICES.value)
     size = Column(String(20), default=CompanySizeEnum.SMALL.value)
+    
+    # Geographic data (V2)
+    city = Column(String(50))
+    region = Column(String(20))
+    state = Column(String(50))
     
     # Products and revenue
     existing_products = Column(String(200))  # Comma-separated: "tallyprime,f1_mis,hrms"
@@ -169,6 +182,10 @@ class Client(Base):
     # Relationships
     tickets = relationship("Ticket", back_populates="client")
     installed_packs = relationship("ClientAutomation", back_populates="client")
+    
+    # Hierarchy relationship (V2)
+    # parent_id is the FK. children are the back-relationship.
+    sub_branches = relationship("Client", backref=backref("parent_company", remote_side=[id]))
 
     def __repr__(self):
         return f"<Client {self.company}>"
@@ -177,13 +194,6 @@ class Client(Base):
 class AutomationPack(Base):
     """
     Add-on module/solution that can be sold to existing clients.
-    
-    Examples:
-    - GST Health Pack: Automated GST reconciliation and health checks
-    - Inventory Alert Pack: Stock alerts, reorder notifications
-    - F-1 MIS Executive Reporting Pack: Custom executive dashboards
-    - Owner Insight Pack: Business owner mobile alerts
-    - Receivable Control Pack: AR aging alerts and follow-ups
     """
     __tablename__ = "automation_packs"
 
@@ -213,10 +223,6 @@ class AutomationPack(Base):
 class Ticket(Base):
     """
     Support issue raised by a client.
-    
-    Used in:
-    - Risk scoring: Many tickets or long resolution times = high risk
-    - Pack recommendations: Ticket patterns suggest needs (GST issues → GST pack)
     """
     __tablename__ = "tickets"
 
@@ -248,10 +254,6 @@ class Ticket(Base):
 class ClientAutomation(Base):
     """
     Junction table: Tracks which automation packs a client has installed.
-    
-    Used to:
-    - Filter out already-installed packs from recommendations
-    - Count installations per pack for popularity metrics
     """
     __tablename__ = "client_automations"
 
@@ -267,5 +269,38 @@ class ClientAutomation(Base):
     client = relationship("Client", back_populates="installed_packs")
     pack = relationship("AutomationPack", back_populates="installations")
 
+
+# ============================================================
+# NEW V2 MODELS
+# ============================================================
+
+class ScoringConfig(Base):
+    """
+    Dynamic weights for scoring logic. 
+    Stored in DB to allow real-time tuning via Admin Panel.
+    """
+    __tablename__ = "scoring_configs"
+
+    key = Column(String(50), primary_key=True)
+    value = Column(Float, nullable=False)
+    category = Column(String(20))  # 'sector', 'size', 'source', 'recency'
+    label = Column(String(100))    # Human readable name
+
     def __repr__(self):
-        return f"<ClientAutomation client={self.client_id} pack={self.pack_id}>"
+        return f"<ScoringConfig {self.key}={self.value}>"
+
+
+class ScoreHistory(Base):
+    """
+    Historical log of scores for trend analysis.
+    """
+    __tablename__ = "score_histories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_id = Column(Integer, nullable=False)
+    entity_type = Column(String(10), nullable=False)  # 'lead' or 'client'
+    score = Column(Float, nullable=False)
+    recorded_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<ScoreHistory {self.entity_type} {self.entity_id}: {self.score}>"

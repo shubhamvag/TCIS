@@ -1,191 +1,71 @@
-# TCIS - Tally Client Intelligence Suite
+# TCIS - Tally Client Intelligence Suite (Enterprise Version)
 
-**Metavision Technology Internal Application**
+**Metavision Technology Internal Operational Platform**
 
-A rule-based decision support tool for lead prioritization, client upsell recommendations, and support risk assessment. Built for B.Tech CSE final year project demonstration.
+TCIS is an enterprise-grade decision support system designed to optimize leads, client, and support operations. It uses **deterministic, rule-based scoring models** to transform raw data into actionable intelligence without the unpredictability of AI black boxes.
 
-## 🎯 What It Does
+## 🎯 Core Objectives
+- **Sales Optimization**: Prioritize leads based on sector fit and engagement (Lead Scoring).
+- **Revenue Expansion**: Identify upsell candidates using gap analysis (Client Intelligence).
+- **Risk Mitigation**: Proactively flag accounts with high support loads (Support Signals).
+- **Product Strategy**: Visualize market penetration of automation solutions (Portfolio Analysis).
 
-TCIS helps Metavision Technology (a TallyPrime solutions provider) answer:
-- **Which leads should we prioritize?** → Lead scoring based on sector, size, source, and engagement
-- **Which clients need upselling?** → Identify clients with missing automation packs
-- **Which clients are at risk?** → Flag clients with high support ticket volumes
+## 🏗 Technical Architecture
 
-All scoring is **deterministic and rule-based** (no ML), making it easy to explain in a viva.
+### **Frontend**: `frontend/tcis-react`
+A high-performance "Enterprise Dashboard" built for speed and data density.
+- **Stack**: React 18, TypeScript, Vite.
+- **Design System**: Tailwind CSS (Strict Light Mode, System Fonts).
+- **Features**: 
+    - Real-time filtering and sorting.
+    - Interactive Recharts visualizations.
+    - Strict Type Safety (TypeScript).
 
-## 📁 Project Structure
+### **Backend**: `backend/app`
+A robust REST API serving business logic and scoring algorithms.
+- **Stack**: Python 3.9+, FastAPI, SQLAlchemy.
+- **Database**: SQLite (Relational Storage).
+- **Logic**: Rule-based scoring engines (Lead Score, Risk Score, Upsell Propensity).
 
-```
-TCIS/
-├── backend/
-│   ├── app/
-│   │   ├── main.py          # FastAPI entry point
-│   │   ├── models.py        # SQLAlchemy ORM models
-│   │   ├── schemas.py       # Pydantic schemas
-│   │   ├── database.py      # DB connection
-│   │   └── routers/
-│   │       ├── leads.py     # Lead CRUD
-│   │       ├── clients.py   # Client CRUD
-│   │       ├── packs.py     # Automation Pack CRUD
-│   │       ├── tickets.py   # Ticket CRUD
-│   │       └── scoring.py   # Scoring logic (★ core business intelligence)
-│   ├── seed_data.py         # Sample data generator
-│   ├── init_db.sql          # SQL schema
-│   └── requirements.txt
-├── frontend/
-│   ├── streamlit_app.py     # Streamlit dashboard
-│   └── requirements.txt
-└── README.md
-```
+## 🚀 Quick Start Guide
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.9+
-- pip
-
-### Step 1: Install Backend Dependencies
+### 1. Start the Backend
 ```bash
 cd backend
+# Install dependencies (first time only)
 pip install -r requirements.txt
-```
-
-### Step 2: Seed Sample Data
-```bash
+# Seed database with sample enterprise data
 python seed_data.py
-```
-
-Expected output:
-```
-TCIS Database Seeder
-==================================================
-Creating database tables...
-  ✓ Tables created
-Clearing existing data...
-  ✓ Existing data cleared
-Seeding data...
-  ✓ Created 8 automation packs
-  ✓ Created 25 leads
-  ✓ Created 25 clients
-  ✓ Created 40 tickets
-  ✓ Created 8 pack installations
-==================================================
-✅ Database seeding complete!
-```
-
-### Step 3: Run Backend
-```bash
+# Run server
 uvicorn app.main:app --reload
 ```
+> Backend runs on: `http://localhost:8000`
 
-API will be available at:
-- Swagger Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
-
-### Step 4: Install Frontend Dependencies
+### 2. Start the Frontend
 ```bash
-cd ../frontend
-pip install -r requirements.txt
+cd frontend/tcis-react
+# Install dependencies (first time only)
+npm install
+# Run development server
+npm run dev
 ```
+> Frontend runs on: `http://localhost:5173`
 
-### Step 5: Run Frontend
-```bash
-streamlit run streamlit_app.py
-```
+## 📊 Modules & Scoring Logic
 
-Dashboard will open at: http://localhost:8501
+### **1. Leads Intelligence**
+- **Goal**: Focus sales effort on "High Quality" targets.
+- **Algorithm**: Weighted sum of `Sector Match` (23%), `Company Size` (23%), `Lead Source` (23%), and `Engagement` (15%).
+- **Visuals**: Scatter plot correlating Score vs. Industry.
 
-## 📊 API Endpoints
+### **2. Client Intelligence**
+- **Goal**: Maximize Lifetime Value (LTV).
+- **Upsell Score**: 0-100 rating based on "Product Gap" (missing modules) and "Purchase Recency".
+- **Risk Flag**: Triggers when `Ticket Volume > Threshold` or `Resolution Time > SLA`.
 
-### Core CRUD
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/leads` | List leads |
-| POST | `/api/leads` | Create lead |
-| GET | `/api/clients` | List clients |
-| POST | `/api/clients` | Create client |
-| GET | `/api/packs` | List automation packs |
-| GET | `/api/tickets` | List tickets |
-| GET | `/api/tickets/stats` | Ticket statistics |
-
-### Scoring (★ Business Intelligence)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/scoring/leads/ranked` | Get leads ranked by score |
-| GET | `/api/scoring/clients/ranked` | Get clients with upsell & risk scores |
-| GET | `/api/scoring/packs/potential` | Get packs with potential client counts |
-
-## 🧮 Scoring Rules (For Viva)
-
-### Lead Scoring (0-100)
-
-| Factor | Weight | Logic |
-|--------|--------|-------|
-| Sector | 23% | manufacturing=1.0, trading=0.7, services=0.5 |
-| Size | 23% | large=1.0, medium=0.7, small=0.4 |
-| Source | 23% | referral=1.0, partner=0.8, indiamart=0.6, justdial=0.5, cold=0.3 |
-| Modules | 15% | +5 points per interested module (max 15) |
-| Recency | 15% | <7d=1.0, <30d=0.7, <90d=0.4, else=0.2 |
-
-**Suggested Actions:**
-- Score ≥70 + stale contact → "Call today"
-- Score ≥50 + multiple modules → "Send brochure"
-- Score <30 → "Low priority"
-
-### Client Upsell Scoring (0-100)
-
-| Factor | Weight | Logic |
-|--------|--------|-------|
-| Product Gap | 40% | Only TallyPrime=40, +MIS=30, +2 more=20, complete=10 |
-| Last Project | 30% | >24 months=30, >12 months=25, >6 months=15, recent=10 |
-| Sector/Size | 30% | (sector_weight + size_weight) / 2 × 30 |
-
-**Pack Recommendations:** Based on ticket patterns (GST issues → GST_HEALTH pack)
-
-### Client Risk Scoring (0-100)
-
-| Factor | Max Points | Logic |
-|--------|------------|-------|
-| Ticket Volume | 40 | 8 points per ticket in last 90 days |
-| Severity | 30 | Weighted average (critical=4, high=3, medium=2, low=1) |
-| Resolution Time | 30 | Avg >14 days=30, >7 days=20, >3 days=10 |
-
-**Risk Flags:**
-- Score ≥60 → "High support load" or "Training needed"
-- Score ≥40 → "Monitor closely"
-
-## 🏗 System Architecture
-
-```
-┌─────────────────┐         ┌─────────────────┐
-│   Streamlit     │  HTTP   │    FastAPI      │
-│   Frontend      │◄───────►│    Backend      │
-│  (Dashboard)    │         │   (REST API)    │
-└─────────────────┘         └────────┬────────┘
-                                     │
-                                     ▼
-                            ┌─────────────────┐
-                            │     SQLite      │
-                            │    Database     │
-                            └─────────────────┘
-```
-
-**Layer Responsibilities:**
-1. **Frontend (Streamlit):** User interface, data visualization, filtering
-2. **Backend (FastAPI):** Business logic, scoring algorithms, data validation
-3. **Database (SQLite):** Persistent storage, queryable via SQLAlchemy ORM
-
-## 📝 Project Abstract
-
-TCIS (Tally Client Intelligence Suite) is a rule-based decision support system designed for Metavision Technology, a TallyPrime solutions provider based in Mumbai. The system addresses the challenge of managing leads and clients across disparate spreadsheets by providing a centralized platform with automated prioritization.
-
-Key features include deterministic lead scoring, client upsell opportunity identification, and support risk assessment. The scoring algorithms use explicit business rules (sector weights, source quality, recency factors) rather than black-box ML models, ensuring transparency and explainability. The system is built with FastAPI for the backend, SQLite for persistence, and Streamlit for internal dashboards.
-
-## 👥 Team
-
-- Developed for B.Tech CSE Final Year Project
-- Client: Metavision Technology (TallyPrime Partner)
+### **3. Support Analytics**
+- **Goal**: Operational Excellence.
+- **Metrics**: Real-time tracking of `Active Operations`, `System Health`, and `High Load Accounts`.
 
 ## 📄 License
-
-Internal use only - Metavision Technology
+Internal use only - Metavision Technology.
