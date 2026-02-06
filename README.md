@@ -1,16 +1,16 @@
 # TCIS - Tally Client Intelligence Suite (Enterprise Version)
 
-**Metavision Technology Internal Operational Platform**
+* Internal Operational Platform**
 
 TCIS is an enterprise-grade decision support system designed to optimize leads, client, and support operations. It uses **deterministic, rule-based scoring models** to transform raw data into actionable intelligence without the unpredictability of AI black boxes.
 
-## 🎯 Core Objectives
+##  Core Objectives
 - **Sales Optimization**: Prioritize leads based on sector fit and engagement (Lead Scoring).
 - **Revenue Expansion**: Identify upsell candidates using gap analysis (Client Intelligence).
 - **Risk Mitigation**: Proactively flag accounts with high support loads (Support Signals).
 - **Product Strategy**: Visualize market penetration of automation solutions (Portfolio Analysis).
 
-## 🏗 Technical Architecture
+##  Technical Architecture
 
 ### **Frontend**: `frontend/tcis-react`
 A high-performance "Enterprise Dashboard" built for speed and data density.
@@ -27,7 +27,7 @@ A robust REST API serving business logic and scoring algorithms.
 - **Database**: SQLite (Relational Storage).
 - **Logic**: Rule-based scoring engines (Lead Score, Risk Score, Upsell Propensity).
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### 1. Start the Backend
 ```bash
@@ -68,4 +68,4 @@ npm run dev
 - **Metrics**: Real-time tracking of `Active Operations`, `System Health`, and `High Load Accounts`.
 
 ## 📄 License
-Internal use only - Metavision Technology.
+Internal use only 
