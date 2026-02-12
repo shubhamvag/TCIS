@@ -12,6 +12,7 @@ export interface Lead {
     lead_score: number;
     suggested_next_action: string;
     status: string;
+    score_breakdown?: Record<string, number>;
 }
 
 export interface Client {
@@ -27,6 +28,7 @@ export interface Client {
     recommended_packs: string[];
     risk_score: number;
     risk_flag: string | null;
+    score_breakdown?: Record<string, number>;
 }
 
 export interface AutomationPack {
@@ -101,4 +103,14 @@ export interface TicketStats {
     by_type: { type: string; count: number }[];
     by_status: { status: string; count: number }[];
     top_clients: { company: string; ticket_count: number }[];
+}
+
+export interface MarketAnomaly {
+    region_name: string;
+    region_type: string;
+    current_avg: number;
+    historical_avg: number;
+    velocity_score: number;
+    anomaly_flag: boolean;
+    lead_count: number;
 }

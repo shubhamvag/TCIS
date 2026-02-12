@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useApiQuery } from "../hooks/useApiQuery";
 import type { Lead, ScoreHistory } from "../api/types";
 import { ScoreTrendChart } from "../components/ScoreTrendChart";
+import { ScoringRadarChart } from "../components/ScoringRadarChart";
 import { LoadingState } from "../components/LoadingState";
 import {
     ChevronLeft,
@@ -111,18 +112,34 @@ const LeadDetail: React.FC = () => {
                     </section>
                 </div>
 
-                {/* Score Momentum Card */}
-                <div className="lg:col-span-2 space-y-6">
+                {/* Scoring Analytics Card */}
+                <div className="lg:col-span-2 space-y-8">
                     <section className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+                            {/* Momentum Chart */}
                             <div>
-                                <h3 className="text-lg font-bold text-slate-800">Score Momentum</h3>
-                                <p className="text-xs text-slate-500">Tracking intelligence score variance over time.</p>
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Score Momentum</h3>
+                                        <p className="text-xs text-slate-500">Tracking intelligence score variance over time.</p>
+                                    </div>
+                                    <Activity className="text-indigo-500" size={24} />
+                                </div>
+                                <ScoreTrendChart data={history || []} height={260} entityType="lead" />
                             </div>
-                            <Activity className="text-indigo-500" size={24} />
-                        </div>
 
-                        <ScoreTrendChart data={history || []} height={300} entityType="lead" />
+                            {/* Radar Chart (Breakdown) */}
+                            <div>
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Scoring Attribution</h3>
+                                        <p className="text-xs text-slate-500">Multi-vector breakdown of current rank.</p>
+                                    </div>
+                                    <Target className="text-indigo-500" size={24} />
+                                </div>
+                                <ScoringRadarChart breakdown={lead.score_breakdown || {}} height={260} />
+                            </div>
+                        </div>
 
                         <div className="mt-8 pt-8 border-t border-slate-100">
                             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Strategic Recommendation</h4>

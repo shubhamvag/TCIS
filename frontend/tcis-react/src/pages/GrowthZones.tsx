@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useApiQuery } from "../hooks/useApiQuery";
-import type { GeoSummary } from "../api/types";
+import type { GeoSummary, MarketAnomaly } from "../api/types";
 import { LoadingState } from "../components/LoadingState";
 import India from "@react-map/india";
 import {
@@ -14,10 +14,12 @@ import {
     Target
 } from "lucide-react";
 import { ExpansionTargets } from "../components/ExpansionTargets";
+import { LocalErrorBoundary } from "../components/LocalErrorBoundary";
 
 const GrowthZones: React.FC = () => {
     const [sector, setSector] = useState<string>("all");
     const { data: geo, loading } = useApiQuery<GeoSummary>("/scoring/geo/summary", { params: { sector: sector === "all" ? undefined : sector } });
+    const { data: anomalies } = useApiQuery<MarketAnomaly[]>("/scoring/anomalies");
     const [selectedStateName, setSelectedStateName] = useState<string | null>(null);
 
     const stateColors = useMemo(() => {
@@ -102,18 +104,20 @@ const GrowthZones: React.FC = () => {
 
                     <div className="flex justify-center items-center py-4 bg-slate-50/20 rounded-2xl relative flex-grow min-h-0">
                         <div className="w-full h-full flex items-center justify-center dashboard-map-container">
-                            <India
-                                type="select-single"
-                                size={550}
-                                mapColor="#f8fafc"
-                                strokeColor="#cbd5e1"
-                                strokeWidth={1}
-                                hoverColor="#e2e8f0"
-                                selectColor="#4f46e5"
-                                cityColors={stateColors}
-                                hints={true}
-                                onSelect={(name) => setSelectedStateName(name)}
-                            />
+                            <LocalErrorBoundary message="Map engine failed to initialize. Please check regional data coordinates.">
+                                <India
+                                    type="select-single"
+                                    size={550}
+                                    mapColor="#f8fafc"
+                                    strokeColor="#cbd5e1"
+                                    strokeWidth={1}
+                                    hoverColor="#e2e8f0"
+                                    selectColor="#4f46e5"
+                                    cityColors={stateColors}
+                                    hints={true}
+                                    onSelect={(name) => setSelectedStateName(name)}
+                                />
+                            </LocalErrorBoundary>
                         </div>
 
                         <style dangerouslySetInnerHTML={{
@@ -145,16 +149,42 @@ const GrowthZones: React.FC = () => {
 
                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col overflow-hidden border-t-8 border-t-indigo-600 transition-all h-full">
                     {!selectedStateName ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center space-y-6">
-                            <div className="p-6 bg-indigo-50 rounded-full text-indigo-200">
-                                <Compass size={64} className="animate-spin-slow" />
+                        <div className="flex flex-col h-full overflow-hidden">
+                            <div className="flex flex-col items-center justify-center p-8 text-slate-400 text-center space-y-6 flex-grow">
+                                <div className="p-6 bg-indigo-50 rounded-full text-indigo-200">
+                                    <Compass size={64} className="animate-spin-slow" />
+                                </div>
+                                <div>
+                                    <p className="font-black text-slate-900 text-xl tracking-tight">Market Radar</p>
+                                    <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[240px]">
+                                        Select a state on the map to unlock deep-dive geographic intelligence.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-black text-slate-900 text-xl tracking-tight">Market Radar</p>
-                                <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[240px]">
-                                    Select a state on the map to unlock deep-dive geographic intelligence.
-                                </p>
-                            </div>
+
+                            {/* Market Velocity Section */}
+                            {anomalies && anomalies.some(a => a.anomaly_flag) && (
+                                <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex-shrink-0">
+                                    <h3 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <TrendingUp size={14} /> High Velocity Alerts
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {anomalies.filter(a => a.anomaly_flag).slice(0, 3).map(anomaly => (
+                                            <div
+                                                key={anomaly.region_name}
+                                                onClick={() => setSelectedStateName(anomaly.region_name)}
+                                                className="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-between cursor-pointer hover:border-indigo-300 transition-all group"
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-800">{anomaly.region_name}</p>
+                                                    <p className="text-[9px] text-emerald-600 font-bold">+{anomaly.velocity_score}% Growth Pulse</p>
+                                                </div>
+                                                <Target size={14} className="text-indigo-400 group-hover:text-indigo-600" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="flex flex-col h-full animate-in slide-in-from-right-8 duration-500 overflow-hidden">
@@ -172,6 +202,12 @@ const GrowthZones: React.FC = () => {
                                     </button>
                                 </div>
                                 <h2 className="text-3xl font-black text-slate-900 tracking-tighter">{selectedStateName}</h2>
+
+                                {anomalies?.find(a => a.region_name === selectedStateName && a.anomaly_flag) && (
+                                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded text-[9px] font-black uppercase tracking-widest animate-bounce-subtle">
+                                        <TrendingUp size={10} /> High Velocity Zone
+                                    </div>
+                                )}
 
                                 <div className="mt-6 flex flex-col gap-2">
                                     <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">

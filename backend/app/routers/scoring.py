@@ -12,6 +12,7 @@ This makes it easy to explain, debug, and adjust.
 from typing import List, Tuple
 from datetime import datetime, date, timedelta
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from collections import Counter
 import math
@@ -24,7 +25,7 @@ from ..models import (
 from ..schemas import (
     LeadWithScore, ClientWithScore, 
     ScoringConfigResponse, ScoringConfigUpdate,
-    ScoreHistoryResponse
+    ScoreHistoryResponse, MarketAnomaly
 )
 
 
@@ -97,7 +98,16 @@ def compute_lead_score(lead: Lead, weights: dict) -> Tuple[float, str]:
     else:
         action = "Low priority - monthly check-in"
     
-    return final_score, action
+    # Breakdown for radar chart
+    breakdown = {
+        "Sector Fit": round(sector_weight * 100, 1),
+        "Size Fit": round(size_weight * 100, 1),
+        "Source Quality": round(source_weight * 100, 1),
+        "Module Interest": round((module_bonus / 15) * 100, 1),
+        "Engagement Recency": round((recency_bonus / 15) * 100, 1)
+    }
+    
+    return final_score, action, breakdown
 
 
 # ============================================================
@@ -166,7 +176,14 @@ def compute_client_upsell_score(
             
         recommended_packs.append(pack.code)
     
-    return upsell_score, recommended_packs
+    # Breakdown for radar chart
+    breakdown = {
+        "Product Gap": round((product_gap_score / 40) * 100, 1),
+        "Recency Score": round((recency_score / 30) * 100, 1),
+        "Size/Sector Fit": round((size_sector_score / 30) * 100, 1)
+    }
+    
+    return upsell_score, recommended_packs, breakdown
 
 
 def compute_client_risk_score(tickets: List[Ticket]) -> Tuple[float, str]:
@@ -226,6 +243,11 @@ def update_scoring_config(key: str, update: ScoringConfigUpdate, db: Session = D
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Config key not found")
     
+    # Hardening: Validate bounds (Weights must be between 0.0 and 1.0)
+    if not (0.0 <= update.value <= 1.0):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Weight must be between 0.0 and 1.0")
+    
     config.value = update.value
     db.commit()
     db.refresh(config)
@@ -247,14 +269,18 @@ def get_ranked_leads(
     
     scored_leads = []
     for lead in leads:
-        score, action = compute_lead_score(lead, weights)
+        score, action, breakdown = compute_lead_score(lead, weights)
         
         # Log to history for trend analysis
         history = ScoreHistory(entity_id=lead.id, entity_type="lead", score=score)
         db.add(history)
         
         data = {c.name: getattr(lead, c.name) for c in lead.__table__.columns}
-        data.update({"lead_score": score, "suggested_next_action": action})
+        data.update({
+            "lead_score": score, 
+            "suggested_next_action": action,
+            "score_breakdown": breakdown
+        })
         scored_leads.append(data)
     
     db.commit()
@@ -282,7 +308,7 @@ def get_ranked_clients(
         installed = db.query(ClientAutomation).filter(ClientAutomation.client_id == client.id).all()
         installed_codes = [db.query(AutomationPack).get(inst.pack_id).code for inst in installed if db.query(AutomationPack).get(inst.pack_id)]
         
-        upsell_score, recommended = compute_client_upsell_score(client, tickets, installed_codes, all_packs, weights)
+        upsell_score, recommended, breakdown = compute_client_upsell_score(client, tickets, installed_codes, all_packs, weights)
         risk_score, risk_flag = compute_client_risk_score(tickets)
         
         # Log to history
@@ -294,7 +320,8 @@ def get_ranked_clients(
             "upsell_score": upsell_score,
             "recommended_packs": recommended,
             "risk_score": risk_score,
-            "risk_flag": risk_flag
+            "risk_flag": risk_flag,
+            "score_breakdown": breakdown
         })
         scored_clients.append(data)
     
@@ -359,7 +386,7 @@ def get_packs_with_potential(db: Session = Depends(get_db)):
         ).all()
         installed_codes = [db.query(AutomationPack).get(inst.pack_id).code for inst in installed if db.query(AutomationPack).get(inst.pack_id)]
         
-        _, recommended = compute_client_upsell_score(client, tickets, installed_codes, all_packs, weights)
+        _, recommended, _ = compute_client_upsell_score(client, tickets, installed_codes, all_packs, weights)
         
         for pack_code in recommended:
             if pack_code in pack_potentials:
@@ -416,7 +443,7 @@ def get_geo_summary(
             continue
             
         ensure_state(lead.state, lead.region)
-        score, _ = compute_lead_score(lead, weights)
+        score, _, _ = compute_lead_score(lead, weights)
         
         st_data = summary["states"][lead.state]
         st_data["lead_count"] += 1
@@ -443,7 +470,7 @@ def get_geo_summary(
         pack_map = {p.id: p.code for p in packs}
         installed_codes = [pack_map.get(inst.pack_id) for inst in installed if inst.pack_id in pack_map]
         
-        upsell_score, _ = compute_client_upsell_score(client, tickets, installed_codes, packs, weights)
+        upsell_score, _, _ = compute_client_upsell_score(client, tickets, installed_codes, packs, weights)
         
         st_data = summary["states"][client.state]
         st_data["client_count"] += 1
@@ -500,3 +527,65 @@ def get_geo_summary(
         del data["total_score"]
 
     return summary
+
+
+@router.get("/anomalies", response_model=List[MarketAnomaly])
+def get_market_anomalies(db: Session = Depends(get_db)):
+    """
+    Detect market velocity anomalies (high-growth zones).
+    Calculates percentage change in average lead scores (Last 30 days vs. 30-90 days baseline).
+    """
+    now = datetime.utcnow()
+    last_30_days = now - timedelta(days=30)
+    baseline_start = now - timedelta(days=90)
+    
+    # 1. Get average lead scores per state for the last 30 days
+    current_avgs = db.query(
+        Lead.state,
+        func.avg(ScoreHistory.score).label("avg_score"),
+        func.count(Lead.id).label("lead_count")
+    ).join(ScoreHistory, Lead.id == ScoreHistory.entity_id)\
+     .filter(ScoreHistory.entity_type == "lead")\
+     .filter(ScoreHistory.recorded_at >= last_30_days)\
+     .group_by(Lead.state).all()
+     
+    # 2. Get historical averages (30-90 days ago)
+    historical_avgs = db.query(
+        Lead.state,
+        func.avg(ScoreHistory.score).label("avg_score")
+    ).join(ScoreHistory, Lead.id == ScoreHistory.entity_id)\
+     .filter(ScoreHistory.entity_type == "lead")\
+     .filter(ScoreHistory.recorded_at >= baseline_start)\
+     .filter(ScoreHistory.recorded_at < last_30_days)\
+     .group_by(Lead.state).all()
+     
+    historical_map = {h.state: h.avg_score for h in historical_avgs if h.state}
+    
+    anomalies = []
+    for cur in current_avgs:
+        if not cur.state: continue
+        
+        hist_avg = historical_map.get(cur.state, 0)
+        
+        # If no history, we use a conservative baseline or skip
+        if hist_avg == 0:
+            hist_avg = 40.0 # Default baseline for new markets
+            
+        velocity = ((cur.avg_score - hist_avg) / hist_avg) * 100
+        
+        # Flag if velocity > 20% growth and sufficient leads
+        is_anomaly = velocity >= 20.0 and cur.lead_count >= 2
+        
+        anomalies.append({
+            "region_name": cur.state,
+            "region_type": "state",
+            "current_avg": round(cur.avg_score, 1),
+            "historical_avg": round(hist_avg, 1),
+            "velocity_score": round(velocity, 1),
+            "anomaly_flag": is_anomaly,
+            "lead_count": cur.lead_count
+        })
+        
+    # Sort by velocity descending
+    anomalies.sort(key=lambda x: x["velocity_score"], reverse=True)
+    return anomalies

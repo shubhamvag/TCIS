@@ -5,7 +5,7 @@ These schemas define the request/response format for the REST API.
 Separate from ORM models to allow flexibility in what data is exposed.
 """
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
 
 
@@ -65,6 +65,7 @@ class LeadWithScore(LeadResponse):
     """Lead with computed scoring information."""
     lead_score: float = Field(..., description="Computed lead score (0-100)")
     suggested_next_action: str = Field(..., description="Recommended next step")
+    score_breakdown: Optional[Dict[str, float]] = Field(None, description="Detailed breakdown of the score factors")
 
 
 # ============================================================
@@ -129,6 +130,7 @@ class ClientWithScore(ClientResponse):
     recommended_packs: List[str] = Field(default_factory=list, description="Suggested automation pack codes")
     risk_score: float = Field(..., description="Support risk score (0-100)")
     risk_flag: Optional[str] = Field(None, description="High support load / Training needed / None")
+    score_breakdown: Optional[Dict[str, float]] = Field(None, description="Detailed breakdown of the upsell score factors")
 
 
 # ============================================================
@@ -273,6 +275,20 @@ class ClientAutomationCreate(ClientAutomationBase):
 class ClientAutomationResponse(ClientAutomationBase):
     """Schema for installation responses."""
     id: int
+
+    class Config:
+        from_attributes = True
+
+
+class MarketAnomaly(BaseModel):
+    """Schema for market velocity anomalies."""
+    region_name: str
+    region_type: str  # 'state' or 'city'
+    current_avg: float
+    historical_avg: float
+    velocity_score: float  # Percentage change
+    anomaly_flag: bool
+    lead_count: int
 
     class Config:
         from_attributes = True

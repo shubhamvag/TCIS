@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApiQuery } from "../hooks/useApiQuery";
 import type { Lead } from "../api/types";
@@ -6,25 +6,61 @@ import { MetricCard } from "../components/MetricCard";
 import { DataTable } from "../components/DataTable";
 import { ChartWrapper } from "../components/ChartWrapper";
 import { LoadingState } from "../components/LoadingState";
-import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { Users, Target, Activity, Award, X } from "lucide-react";
+import {
+    ScatterChart,
+    Scatter,
+    XAxis,
+    YAxis,
+    ZAxis,
+    Tooltip,
+    ResponsiveContainer
+} from "recharts";
+import { Users, Target, Activity, Award, X, Filter, Download } from "lucide-react";
 
 import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
+import { FilterDrawer, type FilterState } from "../components/FilterDrawer";
+import { exportToCSV } from "../utils/ExportUtility";
 
 export default function LeadsDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const stateFilter = searchParams.get("state");
-    const { data: leads, loading } = useApiQuery<Lead[]>("/scoring/leads/ranked", {
-        params: { limit: 50, state: stateFilter || undefined }
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<FilterState>({
+        sectors: [],
+        minScore: 0,
+        maxScore: 100,
+        regions: []
     });
+
+    const { data: rawLeads, loading } = useApiQuery<Lead[]>("/scoring/leads/ranked", {
+        params: { limit: 100, state: stateFilter || undefined }
+    });
+
+    const leads = useMemo(() => {
+        if (!rawLeads) return null;
+        return rawLeads.filter(l => {
+            const sectorMatch = activeFilters.sectors.length === 0 || activeFilters.sectors.includes(l.sector);
+            const scoreMatch = l.lead_score >= activeFilters.minScore && l.lead_score <= activeFilters.maxScore;
+            const regionMatch = activeFilters.regions.length === 0 || activeFilters.regions.includes(l.region || "");
+            return sectorMatch && scoreMatch && regionMatch;
+        });
+    }, [rawLeads, activeFilters]);
+
+    const handleExport = () => {
+        if (!leads) return;
+        exportToCSV(leads, "TCIS_Leads_Intelligence");
+    };
 
     const metrics = useMemo(() => {
         if (!leads) return { qualified: 0, hotTargets: 0, avgScore: "0.0", mfgCore: 0 };
         return {
             qualified: leads.length,
             hotTargets: leads.filter((l) => l.lead_score >= 75).length,
-            avgScore: (leads.reduce((a, b) => a + b.lead_score, 0) / leads.length).toFixed(1),
+            avgScore: leads.length > 0
+                ? (leads.reduce((a, b) => a + b.lead_score, 0) / leads.length).toFixed(1)
+                : "0.0",
             mfgCore: leads.filter((l) => l.sector === "manufacturing").length,
         };
     }, [leads]);
@@ -83,11 +119,25 @@ export default function LeadsDashboard() {
                         </div>
                     )}
                 </div>
-                <div className="flex gap-2">
-                    <select className="bg-white border border-slate-300 text-slate-700 text-sm rounded px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option>Last 30 Days</option>
-                        <option>All Time</option>
-                    </select>
+                <div className="flex gap-3 items-center">
+                    <button
+                        onClick={() => setIsFilterOpen(true)}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm ${activeFilters.sectors.length > 0 || activeFilters.regions.length > 0 || activeFilters.minScore > 0 || activeFilters.maxScore < 100
+                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
+                            }`}
+                    >
+                        <Filter size={16} /> Filter Vectors
+                        {(activeFilters.sectors.length > 0 || activeFilters.regions.length > 0) && (
+                            <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        )}
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+                    >
+                        <Download size={16} /> Export CSV
+                    </button>
                 </div>
             </div>
 
@@ -122,6 +172,16 @@ export default function LeadsDashboard() {
                     />
                 </div>
             </div>
+
+            <FilterDrawer
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                initialFilters={activeFilters}
+                onApply={(f) => {
+                    setActiveFilters(f);
+                    setIsFilterOpen(false);
+                }}
+            />
         </div>
     );
 }

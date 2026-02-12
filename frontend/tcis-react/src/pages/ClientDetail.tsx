@@ -10,8 +10,10 @@ import {
     Globe,
     Activity,
     AlertTriangle,
-    Layers
+    Layers,
+    Target
 } from "lucide-react";
+import { ScoringRadarChart } from "../components/ScoringRadarChart";
 
 const ClientDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -135,17 +137,33 @@ const ClientDetail: React.FC = () => {
                 </div>
 
                 {/* Upsell Analytics Section */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-8">
                     <section className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm">
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+                            {/* Momentum Chart */}
                             <div>
-                                <h3 className="text-lg font-bold text-slate-800">Upsell Momentum</h3>
-                                <p className="text-xs text-slate-500">Tracking willingness for product expansion.</p>
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Upsell Momentum</h3>
+                                        <p className="text-xs text-slate-500">Tracking willingness for product expansion.</p>
+                                    </div>
+                                    <Activity className="text-indigo-500" size={24} />
+                                </div>
+                                <ScoreTrendChart data={history || []} height={260} entityType="client" />
                             </div>
-                            <Activity className="text-indigo-500" size={24} />
-                        </div>
 
-                        <ScoreTrendChart data={history || []} height={300} entityType="client" />
+                            {/* Radar Chart (Breakdown) */}
+                            <div>
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Upsell Attribution</h3>
+                                        <p className="text-xs text-slate-500">Multi-vector breakdown of current potential.</p>
+                                    </div>
+                                    <Target className="text-indigo-500" size={24} />
+                                </div>
+                                <ScoringRadarChart breakdown={client.score_breakdown || {}} height={260} />
+                            </div>
+                        </div>
 
                         {client.risk_flag && (
                             <div className="mt-8 pt-8 border-t border-rose-100">

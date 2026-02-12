@@ -1,27 +1,55 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApiQuery } from "../hooks/useApiQuery";
 import type { Client } from "../api/types";
 import { MetricCard } from "../components/MetricCard";
 import { DataTable } from "../components/DataTable";
 import { LoadingState } from "../components/LoadingState";
-import { TrendingUp, AlertTriangle, Building, Briefcase, X } from "lucide-react";
+import { TrendingUp, AlertTriangle, Building, Briefcase, X, Filter, Download } from "lucide-react";
 
 import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
+import { FilterDrawer, type FilterState } from "../components/FilterDrawer";
+import { exportToCSV } from "../utils/ExportUtility";
 
 export default function ClientsDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const stateFilter = searchParams.get("state");
-    const { data: clients, loading } = useApiQuery<Client[]>("/scoring/clients/ranked", {
-        params: { limit: 50, state: stateFilter || undefined }
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<FilterState>({
+        sectors: [],
+        minScore: 0,
+        maxScore: 100,
+        regions: []
     });
+
+    const { data: rawClients, loading } = useApiQuery<Client[]>("/scoring/clients/ranked", {
+        params: { limit: 100, state: stateFilter || undefined }
+    });
+
+    const clients = useMemo(() => {
+        if (!rawClients) return null;
+        return rawClients.filter(c => {
+            const sectorMatch = activeFilters.sectors.length === 0 || activeFilters.sectors.includes(c.sector);
+            const scoreMatch = c.upsell_score >= activeFilters.minScore && c.upsell_score <= activeFilters.maxScore;
+            const regionMatch = activeFilters.regions.length === 0 || activeFilters.regions.includes(c.region || "");
+            return sectorMatch && scoreMatch && regionMatch;
+        });
+    }, [rawClients, activeFilters]);
+
+    const handleExport = () => {
+        if (!clients) return;
+        exportToCSV(clients, "TCIS_Clients_Intelligence");
+    };
 
     const metrics = useMemo(() => {
         if (!clients) return { base: 0, avgUpsell: "0.0", highYield: 0, riskActive: 0 };
         return {
             base: clients.length,
-            avgUpsell: (clients.reduce((acc, c) => acc + c.upsell_score, 0) / clients.length).toFixed(1),
+            avgUpsell: clients.length > 0
+                ? (clients.reduce((acc, c) => acc + c.upsell_score, 0) / clients.length).toFixed(1)
+                : "0.0",
             highYield: clients.filter(c => c.upsell_score >= 70).length,
             riskActive: clients.filter(c => c.risk_score >= 50).length,
         };
@@ -79,16 +107,38 @@ export default function ClientsDashboard() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-bold text-slate-900">Clients Dashboard</h1>
-                {stateFilter && (
-                    <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold border border-indigo-100 animate-in zoom-in duration-300">
-                        State: {stateFilter}
-                        <button onClick={() => setSearchParams({})} className="hover:text-indigo-900 transition-colors p-0.5" title="Clear filter">
-                            <X size={14} />
-                        </button>
-                    </div>
-                )}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-2xl font-bold text-slate-900">Clients Dashboard</h1>
+                    {stateFilter && (
+                        <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold border border-indigo-100 animate-in zoom-in duration-300">
+                            State: {stateFilter}
+                            <button onClick={() => setSearchParams({})} className="hover:text-indigo-900 transition-colors p-0.5" title="Clear filter">
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+                <div className="flex gap-3 items-center">
+                    <button
+                        onClick={() => setIsFilterOpen(true)}
+                        className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm ${activeFilters.sectors.length > 0 || activeFilters.regions.length > 0 || activeFilters.minScore > 0 || activeFilters.maxScore < 100
+                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
+                            }`}
+                    >
+                        <Filter size={16} /> Filter Vectors
+                        {(activeFilters.sectors.length > 0 || activeFilters.regions.length > 0) && (
+                            <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        )}
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-[0.98]"
+                    >
+                        <Download size={16} /> Export CSV
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -110,6 +160,16 @@ export default function ClientsDashboard() {
                     />
                 </div>
             </div>
+
+            <FilterDrawer
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                initialFilters={activeFilters}
+                onApply={(f) => {
+                    setActiveFilters(f);
+                    setIsFilterOpen(false);
+                }}
+            />
         </div>
     );
 }
