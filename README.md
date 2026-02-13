@@ -1,4 +1,4 @@
-# TCIS - Tally Client Intelligence Suite (Enterprise Version)
+# TCIS - Client Intelligence Suite (Enterprise Version)
 
 * Internal Operational Platform**
 
@@ -51,7 +51,7 @@ npm run dev
 ```
 > Frontend runs on: `http://localhost:5173`
 
-## 📊 Modules & Scoring Logic
+##  Modules & Scoring Logic
 
 ### **1. Leads Intelligence**
 - **Goal**: Focus sales effort on "High Quality" targets.
