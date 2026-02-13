@@ -1,9 +1,10 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Building2, Package, Ticket, Settings, Map } from "lucide-react";
+import { LayoutDashboard, Building2, Package, Ticket, Settings, Map, BarChart3 } from "lucide-react";
 import { cn } from "../lib/utils";
 
 const NAV_ITEMS = [
     { path: "/", label: "Leads Dashboard", icon: LayoutDashboard },
+    { path: "/funnel", label: "Funnel Intelligence", icon: BarChart3 },
     { path: "/clients", label: "Clients Dashboard", icon: Building2 },
     { path: "/growth", label: "Growth Zones", icon: Map },
     { path: "/packs", label: "Automation Packs", icon: Package },

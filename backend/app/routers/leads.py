@@ -2,14 +2,23 @@
 Leads Router - CRUD operations for prospective customers.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Lead
-from ..schemas import LeadCreate, LeadUpdate, LeadResponse
+from ..schemas import LeadCreate, LeadUpdate, LeadResponse, ConvertLeadRequest, ClientResponse
+from .scoring import convert_lead_to_client
 
 router = APIRouter()
+
+# Simple API Key for external simulation (In production, move to env/db)
+TCIS_API_KEY = "tcis_sim_2026_marketing_hub"
+
+def verify_api_key(x_tcis_api_key: str = Header(None)):
+    if x_tcis_api_key != TCIS_API_KEY:
+        raise HTTPException(status_code=403, detail="Unauthorized external access. Invalid TCIS-API-Key.")
+    return x_tcis_api_key
 
 
 # ============================================================
@@ -17,12 +26,16 @@ router = APIRouter()
 # ============================================================
 
 @router.post("/", response_model=LeadResponse, status_code=201)
-def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
+def create_lead(
+    lead: LeadCreate, 
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key)
+):
     """
     Create a new lead.
     
     A lead represents a prospective customer who has shown interest
-    in Metavision products (Tally, MIS, HRMS, etc.).
+    in Tally products (Tally, MIS, HRMS, etc.).
     """
     db_lead = Lead(**lead.model_dump())
     db.add(db_lead)
@@ -114,3 +127,21 @@ def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     db.delete(lead)
     db.commit()
     return None
+@router.post("/{lead_id}/convert", response_model=ClientResponse)
+def convert_lead(
+    lead_id: int, 
+    request: ConvertLeadRequest, 
+    db: Session = Depends(get_db)
+):
+    """
+    Manually convert a Lead to a Client.
+    Provided overrides will be applied to the new Client record.
+    """
+    from .scoring import convert_lead_to_client
+    # In a real app, we would get the current user for performed_by
+    return convert_lead_to_client(
+        db=db, 
+        lead_id=lead_id, 
+        overrides=request.model_dump(exclude_unset=True),
+        source="manual"
+    )

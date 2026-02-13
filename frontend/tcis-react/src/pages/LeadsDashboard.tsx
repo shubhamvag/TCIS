@@ -21,12 +21,15 @@ import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
 import { FilterDrawer, type FilterState } from "../components/FilterDrawer";
 import { exportToCSV } from "../utils/ExportUtility";
+import { LeadCreationModal } from "../components/LeadCreationModal";
+import { UserPlus } from "lucide-react";
 
 export default function LeadsDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const stateFilter = searchParams.get("state");
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState<FilterState>({
         sectors: [],
         minScore: 0,
@@ -34,7 +37,7 @@ export default function LeadsDashboard() {
         regions: []
     });
 
-    const { data: rawLeads, loading } = useApiQuery<Lead[]>("/scoring/leads/ranked", {
+    const { data: rawLeads, loading, refetch } = useApiQuery<Lead[]>("/scoring/leads/ranked", {
         params: { limit: 100, state: stateFilter || undefined }
     });
 
@@ -44,7 +47,8 @@ export default function LeadsDashboard() {
             const sectorMatch = activeFilters.sectors.length === 0 || activeFilters.sectors.includes(l.sector);
             const scoreMatch = l.lead_score >= activeFilters.minScore && l.lead_score <= activeFilters.maxScore;
             const regionMatch = activeFilters.regions.length === 0 || activeFilters.regions.includes(l.region || "");
-            return sectorMatch && scoreMatch && regionMatch;
+            const statusMatch = l.status !== 'converted';
+            return sectorMatch && scoreMatch && regionMatch && statusMatch;
         });
     }, [rawLeads, activeFilters]);
 
@@ -123,14 +127,20 @@ export default function LeadsDashboard() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm ${activeFilters.sectors.length > 0 || activeFilters.regions.length > 0 || activeFilters.minScore > 0 || activeFilters.maxScore < 100
-                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
+                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
                             }`}
                     >
                         <Filter size={16} /> Filter Vectors
                         {(activeFilters.sectors.length > 0 || activeFilters.regions.length > 0) && (
                             <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => setIsCreateOpen(true)}
+                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-[0.98]"
+                    >
+                        <UserPlus size={16} /> Quick Add Lead
                     </button>
                     <button
                         onClick={handleExport}
@@ -180,6 +190,15 @@ export default function LeadsDashboard() {
                 onApply={(f) => {
                     setActiveFilters(f);
                     setIsFilterOpen(false);
+                }}
+            />
+
+            <LeadCreationModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                onSuccess={() => {
+                    refetch();
+                    // Optional: show a small toast here if available
                 }}
             />
         </div>

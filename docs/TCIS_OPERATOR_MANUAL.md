@@ -1,6 +1,6 @@
 # TCIS V2 Operator Manual: Advanced Intelligence Layer
 
-Welcome to the Metavision Tally Client Intelligence Suite (TCIS) V2. This manual provides operational guidance on managing the advanced scoring systems, interpreting analytics, and using the geocentric intelligence maps.
+Welcome to the Tally Client Intelligence Suite (TCIS) V2. This manual provides guidance on managing the scoring systems and using the maps.
 
 ## 1. Intelligence Scoring Model
 
@@ -14,7 +14,7 @@ TCIS uses a deterministic, multi-vector scoring model to rank Leads and Clients.
 - **Engagement Recency**: Temporal decay factor—leads contacted recently rank higher.
 
 ### Client Upsell Potential (0-100)
-- **Product Gap**: Measures the distance between current installations and the full Metavision suite.
+- **Product Gap**: Measures the distance between current installations and our full suite of tools.
 - **Recency Score**: Identifies "stagnant" accounts that haven't implemented new projects in 12+ months.
 - **Size/Sector Fit**: Strategic alignment for expansion.
 

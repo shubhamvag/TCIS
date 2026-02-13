@@ -11,12 +11,15 @@ import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
 import { FilterDrawer, type FilterState } from "../components/FilterDrawer";
 import { exportToCSV } from "../utils/ExportUtility";
+import { ClientCreationModal } from "../components/ClientCreationModal";
+import { UserPlus } from "lucide-react";
 
 export default function ClientsDashboard() {
     const [searchParams, setSearchParams] = useSearchParams();
     const stateFilter = searchParams.get("state");
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [activeFilters, setActiveFilters] = useState<FilterState>({
         sectors: [],
         minScore: 0,
@@ -24,7 +27,7 @@ export default function ClientsDashboard() {
         regions: []
     });
 
-    const { data: rawClients, loading } = useApiQuery<Client[]>("/scoring/clients/ranked", {
+    const { data: rawClients, loading, refetch } = useApiQuery<Client[]>("/scoring/clients/ranked", {
         params: { limit: 100, state: stateFilter || undefined }
     });
 
@@ -123,14 +126,20 @@ export default function ClientsDashboard() {
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all shadow-sm ${activeFilters.sectors.length > 0 || activeFilters.regions.length > 0 || activeFilters.minScore > 0 || activeFilters.maxScore < 100
-                                ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
+                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300"
                             }`}
                     >
                         <Filter size={16} /> Filter Vectors
                         {(activeFilters.sectors.length > 0 || activeFilters.regions.length > 0) && (
                             <span className="w-2 h-2 rounded-full bg-indigo-600"></span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => setIsCreateOpen(true)}
+                        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-[0.98]"
+                    >
+                        <UserPlus size={16} /> Quick Add Client
                     </button>
                     <button
                         onClick={handleExport}
@@ -168,6 +177,14 @@ export default function ClientsDashboard() {
                 onApply={(f) => {
                     setActiveFilters(f);
                     setIsFilterOpen(false);
+                }}
+            />
+
+            <ClientCreationModal
+                isOpen={isCreateOpen}
+                onClose={() => setIsCreateOpen(false)}
+                onSuccess={() => {
+                    refetch();
                 }}
             />
         </div>

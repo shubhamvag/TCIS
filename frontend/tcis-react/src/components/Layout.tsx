@@ -46,7 +46,7 @@ export function Layout() {
                         <Activity className="w-4 h-4" />
                         <span className="text-xs font-semibold uppercase tracking-wider">System Online</span>
                     </div>
-                    <p className="text-xs text-slate-600 mt-2">Metavision v1.3</p>
+                    <p className="text-xs text-slate-600 mt-2">TCIS v1.3</p>
                 </div>
             </aside>
 

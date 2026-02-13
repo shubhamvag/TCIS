@@ -56,9 +56,20 @@ class LeadResponse(LeadBase):
     """Schema for lead responses. Includes ID and timestamps."""
     id: int
     created_at: datetime
+    client_id: Optional[int] = None
+    converted_at: Optional[datetime] = None
+    conversion_source: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class ConvertLeadRequest(BaseModel):
+    """Request schema for converting a lead to a client."""
+    account_manager: Optional[str] = None
+    existing_products: Optional[str] = None
+    notes: Optional[str] = None
+    payment_reference: Optional[str] = None
 
 
 class LeadWithScore(LeadResponse):
@@ -93,7 +104,8 @@ class ClientBase(BaseModel):
 
 class ClientCreate(ClientBase):
     """Schema for creating a new client."""
-    pass
+    lead_id: Optional[int] = None
+    payment_reference: Optional[str] = None
 
 
 class ClientUpdate(BaseModel):
@@ -119,6 +131,7 @@ class ClientResponse(ClientBase):
     """Schema for client responses."""
     id: int
     created_at: datetime
+    origin_lead_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -134,8 +147,22 @@ class ClientWithScore(ClientResponse):
 
 
 # ============================================================
-# NEW V2 SCHEMAS
+# NEW V2.5 SCHEMAS (Conversion & Audit)
 # ============================================================
+
+class LeadConversionResponse(BaseModel):
+    """Schema for lead conversion audit log entries."""
+    id: int
+    lead_id: int
+    client_id: int
+    source: str
+    performed_by: Optional[str]
+    created_at: datetime
+    metadata_json: Optional[str]
+
+    class Config:
+        from_attributes = True
+
 
 class ScoringConfigBase(BaseModel):
     """Base schema for dynamic scoring weights."""
@@ -292,3 +319,25 @@ class MarketAnomaly(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MonthlyYield(BaseModel):
+    """Represents conversion efficiency for a specific month."""
+    month: str
+    yield_rate: float
+
+
+class FunnelStage(BaseModel):
+    """Represents a single stage in the sales funnel."""
+    stage: str
+    count: int
+    conversion_rate: float # Rate from previous stage
+
+
+class FunnelResponse(BaseModel):
+    """Schema for the complete sales funnel metrics."""
+    stages: List[FunnelStage]
+    total_leads: int
+    won_count: int
+    conversion_efficiency: float # Overall New -> Won
+    yield_trend: List[MonthlyYield]

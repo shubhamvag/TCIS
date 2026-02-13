@@ -1,7 +1,7 @@
 """
 TCIS Backend - FastAPI Application Entry Point
 
-Metavision Tally Client Intelligence Suite
+# Tally Client Intelligence Suite
 A rule-based decision support tool for lead prioritization,
 client upsell recommendations, and support risk assessment.
 """
@@ -17,7 +17,7 @@ Base.metadata.create_all(bind=engine)
 # Initialize FastAPI application
 app = FastAPI(
     title="TCIS API",
-    description="Metavision Tally Client Intelligence Suite - Internal API",
+    description="Tally Client Intelligence Suite - Internal API",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"

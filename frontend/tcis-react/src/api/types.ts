@@ -13,6 +13,9 @@ export interface Lead {
     suggested_next_action: string;
     status: string;
     score_breakdown?: Record<string, number>;
+    client_id?: number;
+    converted_at?: string;
+    conversion_source?: string;
 }
 
 export interface Client {
@@ -29,6 +32,7 @@ export interface Client {
     risk_score: number;
     risk_flag: string | null;
     score_breakdown?: Record<string, number>;
+    origin_lead_id?: number;
 }
 
 export interface AutomationPack {

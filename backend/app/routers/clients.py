@@ -2,14 +2,23 @@
 Clients Router - CRUD operations for existing customers.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Client
 from ..schemas import ClientCreate, ClientUpdate, ClientResponse
+from .scoring import convert_lead_to_client
 
 router = APIRouter()
+
+# Re-using same key logic for simulation
+TCIS_API_KEY = "tcis_sim_2026_marketing_hub"
+
+def verify_api_key(x_tcis_api_key: str = Header(None)):
+    if x_tcis_api_key != TCIS_API_KEY:
+        raise HTTPException(status_code=403, detail="Unauthorized external access. Invalid TCIS-API-Key.")
+    return x_tcis_api_key
 
 
 # ============================================================
@@ -17,13 +26,24 @@ router = APIRouter()
 # ============================================================
 
 @router.post("/", response_model=ClientResponse, status_code=201)
-def create_client(client: ClientCreate, db: Session = Depends(get_db)):
+def create_client(
+    client: ClientCreate, 
+    db: Session = Depends(get_db),
+    api_key: str = Depends(verify_api_key)
+):
     """
     Create a new client.
-    
-    A client is an existing customer with installed Metavision products.
+    If lead_id is provided, it triggers the conversion workflow from the lead.
     """
-    db_client = Client(**client.model_dump())
+    if client.lead_id:
+        return convert_lead_to_client(
+            db=db, 
+            lead_id=client.lead_id, 
+            overrides=client.model_dump(exclude_unset=True),
+            source="api" # Automated systems call this endpoint
+        )
+        
+    db_client = Client(**client.model_dump(exclude={"lead_id", "payment_reference"}))
     db.add(db_client)
     db.commit()
     db.refresh(db_client)

@@ -1,6 +1,6 @@
 -- ============================================================
 -- TCIS Database Schema (SQLite)
--- Metavision Tally Client Intelligence Suite
+-- Tally Client Intelligence Suite
 -- ============================================================
 -- This schema is designed for SQLite but can be migrated to PostgreSQL
 -- by changing INTEGER PRIMARY KEY to SERIAL and datetime to TIMESTAMP.

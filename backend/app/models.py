@@ -63,6 +63,14 @@ class LeadStatusEnum(str, enum.Enum):
     NEGOTIATION = "negotiation"
     WON = "won"
     LOST = "lost"
+    CONVERTED = "converted"
+
+
+class LeadConversionSourceEnum(str, enum.Enum):
+    """How the lead was converted to a client."""
+    MANUAL = "manual"
+    API = "api"
+    SYNC = "sync"
 
 
 class TicketTypeEnum(str, enum.Enum):
@@ -99,7 +107,7 @@ class TicketStatusEnum(str, enum.Enum):
 
 class Lead(Base):
     """
-    Prospective customer who has shown interest in Metavision products.
+    Prospective customer who has shown interest in Tally products.
     
     Scoring uses: sector, size, source, interested_modules, last_contact_date
     """
@@ -134,13 +142,18 @@ class Lead(Base):
     status = Column(String(20), default=LeadStatusEnum.NEW.value)
     notes = Column(Text)
 
+    # Conversion Tracking (V2.5)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=True)
+    converted_at = Column(DateTime, nullable=True)
+    conversion_source = Column(String(20), nullable=True) # manual, api, sync
+
     def __repr__(self):
         return f"<Lead {self.company} - {self.name}>"
 
 
 class Client(Base):
     """
-    Existing customer with installed Metavision products.
+    Existing customer with installed Tally products.
     
     Upsell scoring uses: existing_products, last_project_date, sector, size
     Risk scoring uses: related tickets
@@ -169,7 +182,7 @@ class Client(Base):
     
     # Products and revenue
     existing_products = Column(String(200))  # Comma-separated: "tallyprime,f1_mis,hrms"
-    annual_revenue_band = Column(String(20))  # Revenue FROM Metavision: "0-50k", "50k-2L", "2L-5L", "5L+"
+    annual_revenue_band = Column(String(20))  # Revenue FROM Tally: "0-50k", "50k-2L", "2L-5L", "5L+"
     
     # Relationship tracking
     start_date = Column(Date)  # When they became a client
@@ -178,6 +191,9 @@ class Client(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(Text)
+    
+    # Audit Trail
+    origin_lead_id = Column(Integer, nullable=True)
 
     # Relationships
     tickets = relationship("Ticket", back_populates="client")
@@ -304,3 +320,18 @@ class ScoreHistory(Base):
 
     def __repr__(self):
         return f"<ScoreHistory {self.entity_type} {self.entity_id}: {self.score}>"
+
+
+class LeadConversion(Base):
+    """
+    Audit log for Lead-to-Client conversion events.
+    """
+    __tablename__ = "lead_conversions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id"), nullable=False)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    source = Column(String(20), default=LeadConversionSourceEnum.MANUAL.value)
+    performed_by = Column(String(100)) # User who triggered conversion
+    created_at = Column(DateTime, default=datetime.utcnow)
+    metadata_json = Column(Text) # Additional context (overrides, etc.)

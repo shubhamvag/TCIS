@@ -1,9 +1,9 @@
-# TCIS Technical Project Report: Building a Geocentric Intelligence Suite
+# TCIS Technical Project Report: Building a Sales Map Tool
 
 ## Project Overview
-TCIS (Tally Client Intelligence Suite) is a full-stack internal tool I built to help sales and support teams at Metavision handle their Tally Prime business more strategically. Instead of just listing leads, it uses "Intelligence" to tell you **who** to call first, **where** the market is growing fastest in India, and **which** clients are likely to buy more automation packs.
+TCIS (Tally Client Intelligence Suite) is a tool I built to help sales and support teams at the company handle their Tally Prime business better. Instead of just listing leads, it uses some math to tell you **who** to call first, **where** the market is growing in India, and **which** clients might buy more stuff.
 
-The core philosophy of this project is **Deterministic Intelligence**. We aren't using "black-box" AI models. Every score is based on clear, adjustable business rules that we can explain to a user.
+The core idea here is **Simple Scoring Rules**. Every score is based on clear rules we can explain to anyone.
 
 ---
 
@@ -60,6 +60,12 @@ We identify high-value clients across three vectors:
 ### 3. Dynamic Weight Tuning
 In `backend/app/routers/scoring.py`, I implemented a function `get_weights_from_db`. This means when an admin changes a weight in the UI, the frontend calls a `PATCH` endpoint, updates the DB, and every score in the entire system updates instantly.
 
+### 4. Lead-to-Client Promotion (Conversion)
+I built a transaction-safe handoff mechanism that bridges Sales and Service:
+- **Atomic Handoff**: When a lead is marked as "WON," a one-click promotion system creates a Client record, migrates all contact/geo data, and preserves the original Lead ID for audit history.
+- **Automated API Handoff**: The system supports external purchase triggers (e.g., from a billing server) that can convert a lead automatically via the `/api/clients` endpoint.
+- **Continuity**: The client inherits the lead's historical scoring context, ensuring the analytics don't "reset" when they buy a license.
+
 ---
 
 ## Geocentric Intelligence (India Heatmap)
@@ -89,4 +95,4 @@ If I were to take this project further, I would:
 3. **Advanced Hierarchy**: Expand the "Parent-Child" relationship view to handle complex corporate conglomerates.
 
 ---
-*Report written by the TCIS Engineering Team (Student Version)*
+*Report written by the intern (Tally Project)*

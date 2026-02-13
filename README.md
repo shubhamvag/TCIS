@@ -2,7 +2,7 @@
 
 * Internal Operational Platform**
 
-TCIS is an enterprise-grade decision support system designed to optimize leads, client, and support operations. It uses **deterministic, rule-based scoring models** to transform raw data into actionable intelligence without the unpredictability of AI black boxes.
+TCIS is a simple support system I built to help with leads, clients, and support tickets. It uses standard scoring rules to rank everything so the team knows who to call first.
 
 ##  Core Objectives
 - **Sales Optimization**: Prioritize leads based on sector fit and engagement (Lead Scoring).

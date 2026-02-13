@@ -1,14 +1,6 @@
 """
-TCIS Frontend - Enterprise Intelligence Command (v2.0 POWER BUILD)
-
-Metavision Tally Client Intelligence Suite
-Professional Decision Support Platform.
-
-v2.0 ARCHITECTURE:
-- Command Header: Persistent horizontal buttons for instant module access.
-- Strategy Room: Full market potential and conversion war room.
-- Inter-Module Fusion: Leads, Clients, and Support signals unified.
-- Emoji-Free Aesthetic: Deep-Corporate design with high-end typography.
+TCIS Frontend - Management Dashboard
+A tool for managing leads, clients, and support tickets.
 """
 import streamlit as st
 import requests
@@ -25,7 +17,7 @@ API_BASE_URL = "http://127.0.0.1:8000/api"
 
 # Page config (Pure text, no emojis)
 st.set_page_config(
-    page_title="TCIS | Enterprise Intelligence",
+    page_title="TCIS Dashboard",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -108,7 +100,7 @@ def to_excel(df):
 cols_h = st.columns([1, 4])
 with cols_h[0]:
     st.markdown('<h1 class="big-title" style="margin:0;">TCIS v2.0</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="nav-tagline">INTELLIGENCE COMMAND</p>', unsafe_allow_html=True)
+    st.markdown('<p class="nav-tagline">PROJECT DASHBOARD</p>', unsafe_allow_html=True)
 
 with cols_h[1]:
     st.write("## ") # Padding
@@ -121,8 +113,8 @@ with cols_h[1]:
         st.session_state.active_module = "CLIENT GROWTH"; st.rerun()
     if n4.button("PORTFOLIO MODULES", use_container_width=True, type="primary" if st.session_state.active_module == "PORTFOLIO MODULES" else "secondary"):
         st.session_state.active_module = "PORTFOLIO MODULES"; st.rerun()
-    if n5.button("QUANTUM FIELD", use_container_width=True, type="primary" if st.session_state.active_module == "QUANTUM FIELD" else "secondary"):
-        st.session_state.active_module = "QUANTUM FIELD"; st.rerun()
+    if n5.button("DATA SYNC", use_container_width=True, type="primary" if st.session_state.active_module == "DATA SYNC" else "secondary"):
+        st.session_state.active_module = "DATA SYNC"; st.rerun()
 
 st.divider()
 
@@ -234,8 +226,8 @@ elif st.session_state.active_module == "PORTFOLIO MODULES":
 # ------------------------------------------------------------
 # MODULE: QUANTUM FIELD (OUT-OF-THE-BOX INTEGRATION)
 # ------------------------------------------------------------
-elif st.session_state.active_module == "QUANTUM FIELD":
-    st.subheader("Anti-Gravity Dynamics & Market Displacement")
+elif st.session_state.active_module == "DATA SYNC":
+    st.subheader("Data Matrix & Growth Analysis")
     
     # Load Unified Intelligence Data
     import json, os
@@ -257,14 +249,14 @@ elif st.session_state.active_module == "QUANTUM FIELD":
                 forecast = json.load(f)
             q3.metric("24m Stability Risk", f"{forecast['risk_assessment']['stability_score']}%", "SAFE")
 
-        st.markdown("### Strategic Displacement Map (Pune Sector)")
-        # Simple Bubble Chart for MDI
+        st.markdown("### Regional Potential Map (Pune)")
+        # Simple Bubble Chart for Growth
         fig = px.scatter(df_corr, x="anom_vector", y="score", size="mdi_index", color="status",
-                         hover_name="name", title="Business Potential vs. Gravimetric Anomaly",
+                         hover_name="name", title="Business Potential vs. Growth Trend",
                          template="plotly_dark", color_discrete_map={"QUANTUM_ZONE": "#f472b6", "STANDARD": "#3b82f6"})
         st.plotly_chart(fig, use_container_width=True)
         
-        st.markdown("### Quantum Priority Targets")
+        st.markdown("### High Priority Targets")
         st.dataframe(df_corr[df_corr["status"] == "QUANTUM_ZONE"], use_container_width=True, hide_index=True)
     else:
         st.warning("Unified Intelligence Matrix not found. Please run the orchestration pipeline.")
