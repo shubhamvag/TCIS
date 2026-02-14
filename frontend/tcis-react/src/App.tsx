@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import { AppLayout } from "./layout/AppLayout";
 import LeadsDashboard from "./pages/LeadsDashboard";
 import ClientsDashboard from "./pages/ClientsDashboard";
@@ -15,31 +15,72 @@ import type { Lead } from "./api/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Bell, CheckCircle, X } from "lucide-react";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { GlobalErrorBoundary } from "./components/GlobalErrorBoundary";
+import { useFilterSync } from "./hooks/useFilterSync";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// Sync Wrapper to initialize URL filters
+const RootWrapper = () => {
+  useFilterSync();
+  return <Outlet />;
+};
+
+const router = createBrowserRouter([
+  {
+    element: <RootWrapper />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { path: "/", element: <LeadsDashboard /> },
+          { path: "/leads/:id", element: <LeadDetail /> },
+          { path: "/clients", element: <ClientsDashboard /> },
+          { path: "/clients/:id", element: <ClientDetail /> },
+          { path: "/funnel", element: <FunnelAnalytics /> },
+          { path: "/packs", element: <AutomationPacks /> },
+          { path: "/support", element: <SupportAnalytics /> },
+          { path: "/admin", element: <AdminPanel /> },
+          { path: "/growth", element: <GrowthZones /> },
+          { path: "*", element: <Navigate to="/" replace /> }
+        ]
+      }
+    ]
+  }
+]);
+
 function App() {
   const [notification, setNotification] = useState<Lead | null>(null);
   const lastLeadIdRef = useRef<number | null>(null);
 
-  // Live Intelligence Polling (Real-time updates from external channels)
+  // Live Intelligence Polling
   useEffect(() => {
     const pollLeads = async () => {
       try {
         const response = await api.getRankedLeads();
-        const leads = response.data;
-        if (leads.length > 0) {
-          // On first load, just set the reference to the current max ID
+        const leads = response.data || [];
+        if (Array.isArray(leads) && leads.length > 0) {
           if (lastLeadIdRef.current === null) {
             lastLeadIdRef.current = Math.max(...leads.map(l => l.id));
             return;
           }
-
-          // Check if there's a new ID higher than what we've seen
           const maxId = Math.max(...leads.map(l => l.id));
           if (maxId > lastLeadIdRef.current) {
             const newLead = leads.find(l => l.id === maxId);
             if (newLead) {
               setNotification(newLead);
               lastLeadIdRef.current = maxId;
-              // Clear notification after 10 seconds
               setTimeout(() => setNotification(null), 10000);
             }
           }
@@ -48,29 +89,16 @@ function App() {
         console.error("Live Intelligence sync failed:", error);
       }
     };
-
-    const interval = setInterval(pollLeads, 5000); // Poll every 5 seconds
+    const interval = setInterval(pollLeads, 5000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <BrowserRouter>
-      <div className="relative min-h-screen">
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<LeadsDashboard />} />
-            <Route path="/leads/:id" element={<LeadDetail />} />
-            <Route path="/clients" element={<ClientsDashboard />} />
-            <Route path="/clients/:id" element={<ClientDetail />} />
-            <Route path="/funnel" element={<FunnelAnalytics />} />
-            <Route path="/packs" element={<AutomationPacks />} />
-            <Route path="/support" element={<SupportAnalytics />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/growth" element={<GrowthZones />} />
-          </Route>
-        </Routes>
+    <GlobalErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
 
-        {/* Live Notification Toast (Captures real-world API submissions) */}
+        {/* Live Notification Toast */}
         <AnimatePresence>
           {notification && (
             <motion.div
@@ -110,8 +138,10 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </BrowserRouter>
+
+        {(import.meta.env.MODE === "development") && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </GlobalErrorBoundary>
   );
 }
 

@@ -1,6 +1,26 @@
-import { useState } from "react";
 import { X, UserCheck, Save, Building2, MapPin, Briefcase, CreditCard } from "lucide-react";
 import { api } from "../api/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { FormInput } from "./ui/FormInput";
+
+const clientSchema = z.object({
+    company: z.string().min(1, "Company name is required"),
+    name: z.string().min(1, "Primary contact name is required"),
+    email: z.string().email("Invalid email address").optional().or(z.literal("")),
+    phone: z.string().optional(),
+    sector: z.string().default("services"),
+    size: z.string().default("small"),
+    city: z.string().optional(),
+    region: z.string().optional(),
+    existing_products: z.string().optional(),
+    annual_revenue_band: z.string().default("50k-2L"),
+    account_manager: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+type ClientFormData = z.infer<typeof clientSchema>;
 
 interface ClientCreationModalProps {
     isOpen: boolean;
@@ -9,45 +29,40 @@ interface ClientCreationModalProps {
 }
 
 export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreationModalProps) {
-    const [formData, setFormData] = useState({
-        name: "",
-        company: "",
-        email: "",
-        phone: "",
-        sector: "services",
-        size: "small",
-        city: "",
-        region: "",
-        existing_products: "",
-        annual_revenue_band: "50k-2L",
-        account_manager: "",
-        notes: ""
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting },
+    } = useForm<ClientFormData>({
+        resolver: zodResolver(clientSchema) as any,
+        defaultValues: {
+            company: "",
+            name: "",
+            email: "",
+            phone: "",
+            sector: "services",
+            size: "small",
+            city: "",
+            region: "",
+            existing_products: "",
+            annual_revenue_band: "50k-2L",
+            account_manager: "",
+            notes: "",
+        },
     });
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
+    const onSubmit = async (data: ClientFormData) => {
         try {
-            await api.createClient(formData);
+            await api.createClient(data);
             onSuccess();
             onClose();
-            // Reset form
-            setFormData({
-                name: "", company: "", email: "", phone: "",
-                sector: "services", size: "small",
-                city: "", region: "", existing_products: "",
-                annual_revenue_band: "50k-2L", account_manager: "", notes: ""
-            });
+            reset();
         } catch (error) {
             console.error("Failed to create client:", error);
             alert("Failed to save client. Please check your connection.");
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
@@ -69,33 +84,26 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                     </button>
                 </header>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Company Details */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Business Identity</h3>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                    <Building2 size={14} className="text-emerald-500" /> Company Name *
-                                </label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={formData.company}
-                                    onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                                    placeholder="e.g. Meta Corp"
-                                />
-                            </div>
+                            <FormInput
+                                label={<><Building2 size={14} className="text-emerald-500" /> Company Name *</>}
+                                placeholder="e.g. Meta Corp"
+                                error={errors.company}
+                                {...register("company")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-600">Sector</label>
                                     <select
-                                        value={formData.sector}
-                                        onChange={e => setFormData({ ...formData, sector: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                                        {...register("sector")}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
                                     >
                                         <option value="manufacturing">Manufacturing</option>
                                         <option value="trading">Trading</option>
@@ -105,9 +113,8 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-600">Revenue Band</label>
                                     <select
-                                        value={formData.annual_revenue_band}
-                                        onChange={e => setFormData({ ...formData, annual_revenue_band: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                                        {...register("annual_revenue_band")}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none"
                                     >
                                         <option value="0-50k">0 - 50k</option>
                                         <option value="50k-2L">50k - 2L</option>
@@ -122,29 +129,21 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Account Management</h3>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600">Account Manager</label>
-                                <input
-                                    type="text"
-                                    value={formData.account_manager}
-                                    onChange={e => setFormData({ ...formData, account_manager: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                                    placeholder="Employee Name"
-                                />
-                            </div>
+                            <FormInput
+                                label="Account Manager"
+                                placeholder="Employee Name"
+                                error={errors.account_manager}
+                                {...register("account_manager")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                    <CreditCard size={14} className="text-emerald-500" /> Existing Products
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.existing_products}
-                                    onChange={e => setFormData({ ...formData, existing_products: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                                    placeholder="e.g. Tally Prime, GST"
-                                />
-                            </div>
+                            <FormInput
+                                label={<><CreditCard size={14} className="text-emerald-500" /> Existing Products</>}
+                                placeholder="e.g. Tally Prime, GST"
+                                error={errors.existing_products}
+                                {...register("existing_products")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
                         </div>
                     </div>
 
@@ -153,47 +152,33 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Location Profile</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                        <MapPin size={14} className="text-emerald-500" /> City
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.city}
-                                        onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                                        placeholder="City"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-600">Region</label>
-                                    <input
-                                        type="text"
-                                        value={formData.region}
-                                        onChange={e => setFormData({ ...formData, region: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                                        placeholder="Region"
-                                    />
-                                </div>
+                                <FormInput
+                                    label={<><MapPin size={14} className="text-emerald-500" /> City</>}
+                                    placeholder="City"
+                                    error={errors.city}
+                                    {...register("city")}
+                                    className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                                />
+                                <FormInput
+                                    label="Region"
+                                    placeholder="Region"
+                                    error={errors.region}
+                                    {...register("region")}
+                                    className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                                />
                             </div>
                         </div>
 
                         {/* Primary Contact */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Client Admin</h3>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                    <Briefcase size={14} className="text-emerald-500" /> Primary Contact Name *
-                                </label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-                                    placeholder="Full Name"
-                                />
-                            </div>
+                            <FormInput
+                                label={<><Briefcase size={14} className="text-emerald-500" /> Primary Contact Name *</>}
+                                placeholder="Full Name"
+                                error={errors.name}
+                                {...register("name")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
                         </div>
                     </div>
 

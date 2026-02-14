@@ -1,8 +1,6 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { useApiQuery } from "../hooks/useApiQuery";
-import type { Client, ScoreHistory, HierarchyContract } from "../api/types";
-import { ScoreTrendChart } from "../components/ScoreTrendChart";
+import { useClient, useClientHistory, useClientHierarchy } from "../hooks/useClients";
 import { LoadingState } from "../components/LoadingState";
 import {
     ChevronLeft,
@@ -13,16 +11,24 @@ import {
     Layers,
     Target
 } from "lucide-react";
+import { ScoreTrendChart } from "../components/ScoreTrendChart";
 import { ScoringRadarChart } from "../components/ScoringRadarChart";
 
 const ClientDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const { data: client, loading: clientLoading } = useApiQuery<Client>(`/clients/${id}`);
-    const { data: history, loading: historyLoading } = useApiQuery<ScoreHistory[]>(`/scoring/history/client/${id}`);
-    const { data: hierarchy } = useApiQuery<HierarchyContract>(`/clients/${id}/hierarchy`);
+
+    // Use new React Query hooks
+    const { data: client, isLoading: clientLoading } = useClient(id);
+    const { data: history, isLoading: historyLoading } = useClientHistory(id);
+    const { data: hierarchy } = useClientHierarchy(id);
 
     if (clientLoading || historyLoading) return <LoadingState message="Fetching client intelligence..." />;
     if (!client) return <div className="p-8 text-center bg-white rounded-xl border border-slate-200">Client not found.</div>;
+
+    // Defensive check to satisfy TS and prevent runtime errors if client object exists but is incomplete
+    const companyName = client.company || "Unknown Company";
+    const recommendedPacks = client.recommended_packs || [];
+    const scoreBreakdown = client.score_breakdown || {};
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -31,7 +37,7 @@ const ClientDetail: React.FC = () => {
                     <ChevronLeft size={24} />
                 </Link>
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">{client.company}</h1>
+                    <h1 className="text-3xl font-bold text-slate-900">{companyName}</h1>
                     <div className="flex items-center gap-4 mt-1">
                         <span className="flex items-center gap-1.5 text-sm text-slate-500">
                             <Building2 size={16} />
@@ -92,7 +98,7 @@ const ClientDetail: React.FC = () => {
                                 <div className="space-y-2">
                                     <p className="text-[10px] text-slate-400 font-bold uppercase">Sibling Branches ({hierarchy.siblings.length})</p>
                                     <div className="grid grid-cols-1 gap-1.5">
-                                        {hierarchy.siblings.map(sib => (
+                                        {(hierarchy.siblings || []).map((sib: any) => (
                                             <Link key={sib.id} to={`/clients/${sib.id}`} className="flex items-center justify-between p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
                                                 <div className="flex flex-col">
                                                     <span className="text-xs font-semibold text-slate-700">{sib.company}</span>
@@ -122,8 +128,8 @@ const ClientDetail: React.FC = () => {
                             Recommended Packs
                         </h3>
                         <div className="space-y-2">
-                            {client.recommended_packs.length > 0 ? (
-                                client.recommended_packs.map(pack => (
+                            {recommendedPacks.length > 0 ? (
+                                recommendedPacks.map((pack: string) => (
                                     <div key={pack} className="flex justify-between items-center p-3 bg-indigo-50 text-indigo-700 rounded border border-indigo-100">
                                         <span className="text-sm font-bold">{pack}</span>
                                         <ChevronLeft size={16} className="rotate-180" />
@@ -161,7 +167,7 @@ const ClientDetail: React.FC = () => {
                                     </div>
                                     <Target className="text-indigo-500" size={24} />
                                 </div>
-                                <ScoringRadarChart breakdown={client.score_breakdown || {}} height={260} />
+                                <ScoringRadarChart breakdown={scoreBreakdown} height={260} />
                             </div>
                         </div>
 

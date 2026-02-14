@@ -1,10 +1,8 @@
 import React from "react";
-import { useParams, Link } from "react-router-dom";
-import { useApiQuery } from "../hooks/useApiQuery";
-import type { Lead, ScoreHistory } from "../api/types";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useLead, useLeadHistory, useConvertLead, useUpdateLead } from "../hooks/useLeads";
 import { ScoreTrendChart } from "../components/ScoreTrendChart";
 import { ScoringRadarChart } from "../components/ScoringRadarChart";
-import { LoadingState } from "../components/LoadingState";
 import {
     ChevronLeft,
     Building2,
@@ -23,47 +21,66 @@ import {
     ThumbsUp
 } from "lucide-react";
 import { ConversionModal } from "../components/ConversionModal";
-import { api } from "../api/client";
-import { useNavigate } from "react-router-dom";
+import { Skeleton } from "../components/ui/Skeleton";
 
 const LeadDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { data: lead, loading: leadLoading } = useApiQuery<Lead>(`/leads/${id}`);
-    const { data: history, loading: historyLoading } = useApiQuery<ScoreHistory[]>(`/scoring/history/lead/${id}`);
+
+    // Data Fetching
+    const { data: lead, isLoading: leadLoading } = useLead(id);
+    const { data: history, isLoading: historyLoading } = useLeadHistory(id);
+
+    // Mutations
+    const convertMutation = useConvertLead();
+    const updateMutation = useUpdateLead();
 
     const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const handleConvert = async (data: any) => {
         if (!id) return;
-        setIsSubmitting(true);
         try {
-            const response = await api.convertLead(parseInt(id), data);
-            // On success, we navigate to the new client detail page
+            const response = await convertMutation.mutateAsync({ id: parseInt(id), data });
             navigate(`/clients/${response.data.id}`);
         } catch (error) {
             console.error("Conversion failed:", error);
             alert("Failed to convert lead. Please try again.");
-            setIsSubmitting(false);
         }
     };
 
     const handleStatusUpdate = async (newStatus: string) => {
         if (!id) return;
-        setIsSubmitting(true);
         try {
-            await api.updateLead(parseInt(id), { status: newStatus });
-            // Refresh state since we are using useApiQuery which doesn't auto-poll
-            window.location.reload();
+            await updateMutation.mutateAsync({ id: parseInt(id), data: { status: newStatus } });
         } catch (error) {
             console.error("Status update failed:", error);
             alert("Failed to update status. Please try again.");
-            setIsSubmitting(false);
         }
     };
 
-    if (leadLoading || historyLoading) return <LoadingState message="Fetching lead profile..." />;
+    if (leadLoading || historyLoading) return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            <header className="flex items-center gap-4">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-48" />
+                </div>
+                <div className="ml-auto">
+                    <Skeleton className="h-12 w-32 rounded-2xl" />
+                </div>
+            </header>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="space-y-6">
+                    <Skeleton className="h-64 w-full rounded-xl" />
+                    <Skeleton className="h-48 w-full rounded-xl" />
+                </div>
+                <div className="lg:col-span-2 space-y-8">
+                    <Skeleton className="h-96 w-full rounded-xl" />
+                </div>
+            </div>
+        </div>
+    );
     if (!lead) return <div className="p-8 text-center bg-white rounded-xl border border-slate-200">Lead not found.</div>;
 
     return (
@@ -118,7 +135,7 @@ const LeadDetail: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 leadName={lead.name}
                 leadCompany={lead.company}
-                isSubmitting={isSubmitting}
+                isSubmitting={convertMutation.isPending}
                 onConfirm={handleConvert}
             />
 
@@ -189,7 +206,7 @@ const LeadDetail: React.FC = () => {
                             <div className="grid grid-cols-1 gap-2">
                                 {lead.status === 'new' && (
                                     <button
-                                        disabled={isSubmitting}
+                                        disabled={updateMutation.isPending}
                                         onClick={() => handleStatusUpdate('contacted')}
                                         className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all disabled:opacity-50"
                                     >
@@ -198,7 +215,7 @@ const LeadDetail: React.FC = () => {
                                 )}
                                 {(lead.status === 'contacted' || lead.status === 'new') && (
                                     <button
-                                        disabled={isSubmitting}
+                                        disabled={updateMutation.isPending}
                                         onClick={() => handleStatusUpdate('qualified')}
                                         className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all disabled:opacity-50"
                                     >
@@ -208,14 +225,14 @@ const LeadDetail: React.FC = () => {
                                 {(lead.status === 'qualified' || lead.status === 'contacted' || lead.status === 'proposal' || lead.status === 'negotiation') && (
                                     <div className="flex gap-2">
                                         <button
-                                            disabled={isSubmitting}
+                                            disabled={updateMutation.isPending}
                                             onClick={() => handleStatusUpdate('won')}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-all disabled:opacity-50"
                                         >
                                             <ThumbsUp size={16} /> Mark as Won
                                         </button>
                                         <button
-                                            disabled={isSubmitting}
+                                            disabled={updateMutation.isPending}
                                             onClick={() => handleStatusUpdate('lost')}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm font-bold hover:bg-rose-100 transition-all disabled:opacity-50"
                                         >
@@ -225,7 +242,7 @@ const LeadDetail: React.FC = () => {
                                 )}
                                 {(lead.status === 'won' || lead.status === 'lost') && (
                                     <button
-                                        disabled={isSubmitting}
+                                        disabled={updateMutation.isPending}
                                         onClick={() => handleStatusUpdate('qualified')}
                                         className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all disabled:opacity-50"
                                     >

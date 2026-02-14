@@ -1,6 +1,25 @@
-import { useState } from "react";
 import { X, UserPlus, Save, Building2, MapPin, Briefcase } from "lucide-react";
 import { api } from "../api/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { FormInput } from "./ui/FormInput";
+
+const leadSchema = z.object({
+    company: z.string().min(1, "Company name is required"),
+    name: z.string().min(1, "Contact name is required"),
+    email: z.string().email("Invalid email address").optional().or(z.literal("")),
+    phone: z.string().optional(),
+    sector: z.string().default("services"),
+    size: z.string().default("small"),
+    source: z.string().default("cold"),
+    city: z.string().optional(),
+    region: z.string().optional(),
+    interested_modules: z.string().optional(),
+    notes: z.string().optional(),
+});
+
+type LeadFormData = z.infer<typeof leadSchema>;
 
 interface LeadCreationModalProps {
     isOpen: boolean;
@@ -9,45 +28,39 @@ interface LeadCreationModalProps {
 }
 
 export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationModalProps) {
-    const [formData, setFormData] = useState({
-        name: "",
-        company: "",
-        email: "",
-        phone: "",
-        sector: "services",
-        size: "small",
-        source: "cold",
-        city: "",
-        region: "",
-        interested_modules: "",
-        notes: ""
+    const {
+        register,
+        handleSubmit,
+        reset,
+        formState: { errors, isSubmitting },
+    } = useForm<LeadFormData>({
+        resolver: zodResolver(leadSchema) as any,
+        defaultValues: {
+            company: "",
+            name: "",
+            email: "",
+            phone: "",
+            sector: "services",
+            size: "small",
+            source: "cold",
+            city: "",
+            region: "",
+            interested_modules: "",
+            notes: "",
+        },
     });
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-
+    const onSubmit = async (data: LeadFormData) => {
         try {
-            // We use the internal API client which we will update to include the API Key for these specific POST calls
-            // or we use axios directly like the simulator
-            await api.createLead(formData);
+            await api.createLead(data);
             onSuccess();
             onClose();
-            // Reset form
-            setFormData({
-                name: "", company: "", email: "", phone: "",
-                sector: "services", size: "small", source: "cold",
-                city: "", region: "", interested_modules: "", notes: ""
-            });
+            reset();
         } catch (error) {
             console.error("Failed to create lead:", error);
             alert("Failed to save lead. Please check your connection.");
-        } finally {
-            setIsSubmitting(false);
         }
     };
 
@@ -69,33 +82,25 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                     </button>
                 </header>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Company Details */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Business Identity</h3>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                    <Building2 size={14} className="text-indigo-500" /> Company Name *
-                                </label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={formData.company}
-                                    onChange={e => setFormData({ ...formData, company: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                                    placeholder="e.g. Acme Solutions"
-                                />
-                            </div>
+                            <FormInput
+                                label={<><Building2 size={14} className="text-indigo-500" /> Company Name *</>}
+                                placeholder="e.g. Acme Solutions"
+                                error={errors.company}
+                                {...register("company")}
+                            />
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-600">Sector</label>
                                     <select
-                                        value={formData.sector}
-                                        onChange={e => setFormData({ ...formData, sector: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                        {...register("sector")}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
                                     >
                                         <option value="manufacturing">Manufacturing</option>
                                         <option value="trading">Trading</option>
@@ -105,9 +110,8 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-600">Scale</label>
                                     <select
-                                        value={formData.size}
-                                        onChange={e => setFormData({ ...formData, size: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                        {...register("size")}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
                                     >
                                         <option value="small">Small (MSME)</option>
                                         <option value="medium">Medium</option>
@@ -121,28 +125,20 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Primary Contact</h3>
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600">Contact Name *</label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                                    placeholder="First & Last Name"
-                                />
-                            </div>
+                            <FormInput
+                                label="Contact Name *"
+                                placeholder="First & Last Name"
+                                error={errors.name}
+                                {...register("name")}
+                            />
 
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-600">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                                    placeholder="contact@company.com"
-                                />
-                            </div>
+                            <FormInput
+                                label="Email Address"
+                                placeholder="contact@company.com"
+                                type="email"
+                                error={errors.email}
+                                {...register("email")}
+                            />
                         </div>
                     </div>
 
@@ -151,28 +147,20 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Market Geography</h3>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                                        <MapPin size={14} className="text-indigo-500" /> City
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.city}
-                                        onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                                        placeholder="City"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-600">State/Region</label>
-                                    <input
-                                        type="text"
-                                        value={formData.region}
-                                        onChange={e => setFormData({ ...formData, region: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                                        placeholder="Region"
-                                    />
-                                </div>
+                                <FormInput
+                                    label={<><MapPin size={14} className="text-indigo-500" /> City</>}
+                                    placeholder="City"
+                                    error={errors.city}
+                                    {...register("city")}
+                                    className="focus:ring-indigo-500/20 focus:border-indigo-500"
+                                />
+                                <FormInput
+                                    label="State/Region"
+                                    placeholder="Region"
+                                    error={errors.region}
+                                    {...register("region")}
+                                    className="focus:ring-indigo-500/20 focus:border-indigo-500"
+                                />
                             </div>
                         </div>
 
@@ -185,9 +173,8 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                                         <Briefcase size={14} className="text-indigo-500" /> Source
                                     </label>
                                     <select
-                                        value={formData.source}
-                                        onChange={e => setFormData({ ...formData, source: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                        {...register("source")}
+                                        className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
                                     >
                                         <option value="referral">Referral</option>
                                         <option value="partner">Channel Partner</option>
@@ -195,16 +182,12 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                                         <option value="exhibition">Exhibition/Event</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-600">Product Interest</label>
-                                    <input
-                                        type="text"
-                                        value={formData.interested_modules}
-                                        onChange={e => setFormData({ ...formData, interested_modules: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-                                        placeholder="e.g. Tally, MIS"
-                                    />
-                                </div>
+                                <FormInput
+                                    label="Product Interest"
+                                    placeholder="e.g. Tally, MIS"
+                                    error={errors.interested_modules}
+                                    {...register("interested_modules")}
+                                />
                             </div>
                         </div>
                     </div>
