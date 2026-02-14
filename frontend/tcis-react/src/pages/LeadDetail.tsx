@@ -21,7 +21,7 @@ import {
     ThumbsUp
 } from "lucide-react";
 import { ConversionModal } from "../components/ConversionModal";
-import { Skeleton } from "../components/ui/Skeleton";
+import { DetailPageSkeleton } from "../components/ui/skeletons/DetailPageSkeleton";
 
 const LeadDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -58,29 +58,7 @@ const LeadDetail: React.FC = () => {
         }
     };
 
-    if (leadLoading || historyLoading) return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-64" />
-                    <Skeleton className="h-4 w-48" />
-                </div>
-                <div className="ml-auto">
-                    <Skeleton className="h-12 w-32 rounded-2xl" />
-                </div>
-            </header>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="space-y-6">
-                    <Skeleton className="h-64 w-full rounded-xl" />
-                    <Skeleton className="h-48 w-full rounded-xl" />
-                </div>
-                <div className="lg:col-span-2 space-y-8">
-                    <Skeleton className="h-96 w-full rounded-xl" />
-                </div>
-            </div>
-        </div>
-    );
+    if (leadLoading || historyLoading) return <DetailPageSkeleton />;
     if (!lead) return <div className="p-8 text-center bg-white rounded-xl border border-slate-200">Lead not found.</div>;
 
     return (

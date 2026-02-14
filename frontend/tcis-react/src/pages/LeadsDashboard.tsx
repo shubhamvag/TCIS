@@ -5,6 +5,8 @@ import { useAppStore } from "../store/useAppStore";
 import { MetricCard } from "../components/MetricCard";
 import { DataTable, type Column } from "../components/DataTable";
 import { DashboardGrid, DashboardWidget } from "../components/DashboardGrid";
+import { CardSkeleton } from "../components/ui/skeletons/CardSkeleton";
+import { ChartSkeleton } from "../components/ui/skeletons/ChartSkeleton";
 import {
     ScatterChart,
     Scatter,
@@ -141,10 +143,21 @@ export default function LeadsDashboard() {
 
             {/* Metrics Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard label="Active Targets" value={metrics.qualified} sub="In pipeline" icon={Users} />
-                <MetricCard label="Hot Targets" value={metrics.hotTargets} sub="Score > 75" icon={Target} />
-                <MetricCard label="Avg Quality" value={metrics.avgScore} sub="Index" icon={Activity} />
-                <MetricCard label="Manufacturing" value={metrics.mfgCore} sub="Sector Core" icon={Award} />
+                {isLoading ? (
+                    <>
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <MetricCard label="Active Targets" value={metrics.qualified} sub="In pipeline" icon={Users} />
+                        <MetricCard label="Hot Targets" value={metrics.hotTargets} sub="Score > 75" icon={Target} />
+                        <MetricCard label="Avg Quality" value={metrics.avgScore} sub="Index" icon={Activity} />
+                        <MetricCard label="Manufacturing" value={metrics.mfgCore} sub="Sector Core" icon={Award} />
+                    </>
+                )}
             </div>
 
             {/* Main Content Grid */}
@@ -155,15 +168,19 @@ export default function LeadsDashboard() {
 
                 <div className="space-y-6">
                     <DashboardWidget title="Lead Distribution" subtitle="Sector vs Quality Mapping">
-                        <ResponsiveContainer width="100%" height={260}>
-                            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                                <XAxis type="number" dataKey="lead_score" name="Score" domain={[0, 100]} stroke="#94a3b8" fontSize={10} tickLine={false} />
-                                <YAxis type="category" dataKey="sector" name="Sector" stroke="#94a3b8" width={60} fontSize={10} tickLine={false} />
-                                <ZAxis type="number" dataKey="lead_score" range={[50, 400]} />
-                                <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderColor: '#f1f5f9', borderRadius: '12px', fontSize: '10px' }} />
-                                <Scatter name="Leads" data={leads} fill="#0f172a" />
-                            </ScatterChart>
-                        </ResponsiveContainer>
+                        {isLoading ? (
+                            <ChartSkeleton height={260} />
+                        ) : (
+                            <ResponsiveContainer width="100%" height={260}>
+                                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+                                    <XAxis type="number" dataKey="lead_score" name="Score" domain={[0, 100]} stroke="#94a3b8" fontSize={10} tickLine={false} />
+                                    <YAxis type="category" dataKey="sector" name="Sector" stroke="#94a3b8" width={60} fontSize={10} tickLine={false} />
+                                    <ZAxis type="number" dataKey="lead_score" range={[50, 400]} />
+                                    <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{ borderColor: '#f1f5f9', borderRadius: '12px', fontSize: '10px' }} />
+                                    <Scatter name="Leads" data={leads} fill="#0f172a" />
+                                </ScatterChart>
+                            </ResponsiveContainer>
+                        )}
                     </DashboardWidget>
 
                     <ExpansionTargets

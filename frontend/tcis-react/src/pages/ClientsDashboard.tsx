@@ -10,6 +10,7 @@ import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
 import { exportToCSV } from "../utils/ExportUtility";
 import { ClientCreationModal } from "../components/ClientCreationModal";
+import { CardSkeleton } from "../components/ui/skeletons/CardSkeleton";
 import type { Client } from "../api/types";
 
 export default function ClientsDashboard() {
@@ -136,10 +137,21 @@ export default function ClientsDashboard() {
 
             {/* Metrics Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard label="Total Accounts" value={metrics.base} icon={Building} />
-                <MetricCard label="Avg Upsell Score" value={metrics.avgUpsell} icon={TrendingUp} />
-                <MetricCard label="High Yield" value={metrics.highYield} icon={Briefcase} />
-                <MetricCard label="At Risk" value={metrics.riskActive} icon={AlertTriangle} />
+                {isLoading ? (
+                    <>
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                        <CardSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <MetricCard label="Total Accounts" value={metrics.base} icon={Building} />
+                        <MetricCard label="Avg Upsell Score" value={metrics.avgUpsell} icon={TrendingUp} />
+                        <MetricCard label="High Yield" value={metrics.highYield} icon={Briefcase} />
+                        <MetricCard label="At Risk" value={metrics.riskActive} icon={AlertTriangle} />
+                    </>
+                )}
             </div>
 
             {/* Main Content Grid */}

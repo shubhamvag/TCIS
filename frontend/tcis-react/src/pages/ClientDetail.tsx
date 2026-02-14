@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { useClient, useClientHistory, useClientHierarchy } from "../hooks/useClients";
-import { LoadingState } from "../components/LoadingState";
+import { DetailPageSkeleton } from "../components/ui/skeletons/DetailPageSkeleton";
 import {
     ChevronLeft,
     Building2,
@@ -22,7 +22,7 @@ const ClientDetail: React.FC = () => {
     const { data: history, isLoading: historyLoading } = useClientHistory(id);
     const { data: hierarchy } = useClientHierarchy(id);
 
-    if (clientLoading || historyLoading) return <LoadingState message="Fetching client intelligence..." />;
+    if (clientLoading || historyLoading) return <DetailPageSkeleton />;
     if (!client) return <div className="p-8 text-center bg-white rounded-xl border border-slate-200">Client not found.</div>;
 
     // Defensive check to satisfy TS and prevent runtime errors if client object exists but is incomplete
