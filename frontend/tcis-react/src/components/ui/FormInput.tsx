@@ -1,43 +1,46 @@
-import { forwardRef, type ReactNode } from "react";
-import type { InputHTMLAttributes } from "react";
-import { cn } from "../../lib/utils";
+import { forwardRef } from "react";
 import type { FieldError } from "react-hook-form";
+import { InlineError } from "./InlineError";
+import { CheckCircle2 } from "lucide-react";
+import { cn } from "../../lib/utils";
 
-interface FormInputProps extends InputHTMLAttributes<HTMLInputElement> {
-    label?: ReactNode;
+interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    label: React.ReactNode;
     error?: FieldError;
+    showSuccess?: boolean;
     className?: string;
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-    ({ label, error, className, id, ...props }, ref) => {
+    ({ label, error, showSuccess, className, ...props }, ref) => {
+        const hasError = !!error;
+        const isSuccess = showSuccess && !hasError;
+
         return (
             <div className="space-y-1.5">
-                {label && (
-                    <label
-                        htmlFor={id}
-                        className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2"
-                    >
-                        {label}
-                    </label>
-                )}
+                <label className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                    {label}
+                </label>
                 <div className="relative">
                     <input
                         ref={ref}
-                        id={id}
                         className={cn(
-                            "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all",
-                            error && "border-rose-300 focus:border-rose-500 focus:ring-rose-500/20 bg-rose-50/30",
+                            "w-full px-4 py-2 bg-slate-50 border rounded-xl text-sm outline-none transition-all",
+                            "focus:ring-2 focus:ring-indigo-500/20",
+                            hasError && "border-rose-500 focus:border-rose-500 bg-rose-50/50",
+                            isSuccess && "border-emerald-500 focus:border-emerald-500",
+                            !hasError && !isSuccess && "border-slate-200 focus:border-indigo-500",
                             className
                         )}
                         {...props}
                     />
+                    {isSuccess && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <CheckCircle2 size={16} className="text-emerald-500" />
+                        </div>
+                    )}
                 </div>
-                {error && (
-                    <p className="text-xs font-bold text-rose-500 animate-in slide-in-from-top-1">
-                        {error.message}
-                    </p>
-                )}
+                {error && <InlineError message={error.message || "Invalid input"} />}
             </div>
         );
     }

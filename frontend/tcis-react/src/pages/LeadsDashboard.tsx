@@ -21,10 +21,12 @@ import { ExpansionTargets } from "../components/ExpansionTargets";
 import type { ExpansionTarget } from "../components/ExpansionTargets";
 import { exportToCSV } from "../utils/ExportUtility";
 import { LeadCreationModal } from "../components/LeadCreationModal";
+import { QueryErrorState } from "../components/ui/QueryErrorState";
+import { EmptyState } from "../components/ui/EmptyState";
 import type { Lead } from "../api/types";
 
 export default function LeadsDashboard() {
-    const { data: rawLeads, isLoading, refetch } = useLeads();
+    const { data: rawLeads, isLoading, error, refetch } = useLeads();
     const filters = useAppStore((state) => state.filters);
     const resetFilters = useAppStore((state) => state.resetFilters);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -140,6 +142,27 @@ export default function LeadsDashboard() {
                     </button>
                 </div>
             </div>
+
+            {/* Error State */}
+            {error && (
+                <QueryErrorState
+                    error={error as Error}
+                    onRetry={() => refetch()}
+                />
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !error && leads.length === 0 && (
+                <EmptyState
+                    icon={Users}
+                    title="No leads found"
+                    description="No leads match your current filters. Try adjusting your search criteria or add a new lead to get started."
+                    action={{
+                        label: "Add New Lead",
+                        onClick: () => setIsCreateOpen(true)
+                    }}
+                />
+            )}
 
             {/* Metrics Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

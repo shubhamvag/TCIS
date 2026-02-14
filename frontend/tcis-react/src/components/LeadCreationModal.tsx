@@ -4,6 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FormInput } from "./ui/FormInput";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 
 const leadSchema = z.object({
     company: z.string().min(1, "Company name is required"),
@@ -32,9 +34,11 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
         register,
         handleSubmit,
         reset,
-        formState: { errors, isSubmitting },
+        formState: { errors, isSubmitting, touchedFields },
     } = useForm<LeadFormData>({
         resolver: zodResolver(leadSchema) as any,
+        mode: 'onBlur',
+        reValidateMode: 'onChange',
         defaultValues: {
             company: "",
             name: "",
@@ -49,6 +53,10 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
             notes: "",
         },
     });
+
+    // Accessibility hooks
+    const modalRef = useFocusTrap(isOpen);
+    useEscapeKey(isOpen, onClose);
 
     if (!isOpen) return null;
 
@@ -65,19 +73,34 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="lead-modal-title"
+                aria-describedby="lead-modal-description"
+                className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <header className="bg-indigo-600 px-8 py-6 flex items-center justify-between text-white">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-white/20 rounded-xl">
                             <UserPlus size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold">In-Person Lead Intake</h2>
-                            <p className="text-indigo-100 text-xs">Register a new prospect manually into the intelligence pool.</p>
+                            <h2 id="lead-modal-title" className="text-xl font-bold">In-Person Lead Intake</h2>
+                            <p id="lead-modal-description" className="text-indigo-100 text-xs">Register a new prospect manually into the intelligence pool.</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-xl transition-colors">
+                    <button
+                        onClick={onClose}
+                        className="hover:bg-white/20 p-2 rounded-xl transition-colors"
+                        aria-label="Close modal"
+                    >
                         <X size={20} />
                     </button>
                 </header>
@@ -92,6 +115,7 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                                 label={<><Building2 size={14} className="text-indigo-500" /> Company Name *</>}
                                 placeholder="e.g. Acme Solutions"
                                 error={errors.company}
+                                showSuccess={touchedFields.company && !errors.company}
                                 {...register("company")}
                             />
 
@@ -126,17 +150,19 @@ export function LeadCreationModal({ isOpen, onClose, onSuccess }: LeadCreationMo
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Primary Contact</h3>
 
                             <FormInput
-                                label="Contact Name *"
-                                placeholder="First & Last Name"
+                                label={<><MapPin size={14} className="text-indigo-500" /> Contact Name *</>}
+                                placeholder="Full name"
                                 error={errors.name}
+                                showSuccess={touchedFields.name && !errors.name}
                                 {...register("name")}
                             />
 
                             <FormInput
-                                label="Email Address"
-                                placeholder="contact@company.com"
+                                label="Email"
                                 type="email"
+                                placeholder="contact@company.com"
                                 error={errors.email}
+                                showSuccess={touchedFields.email && !errors.email}
                                 {...register("email")}
                             />
                         </div>

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { X, CheckCircle, Briefcase, User, Box, ShieldCheck } from "lucide-react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 
 interface ConversionModalProps {
     isOpen: boolean;
@@ -15,23 +17,42 @@ export function ConversionModal({ isOpen, onClose, leadName, leadCompany, onConf
     const [initialProducts, setInitialProducts] = useState("tallyprime");
     const [notes, setNotes] = useState("");
 
+    // Accessibility hooks
+    const modalRef = useFocusTrap(isOpen);
+    useEscapeKey(isOpen, onClose);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="conversion-modal-title"
+                aria-describedby="conversion-modal-description"
+                className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="bg-emerald-600 px-6 py-4 flex items-center justify-between text-white">
                     <div className="flex items-center gap-2 font-bold">
                         <CheckCircle size={20} />
-                        <span>Promote to Client</span>
+                        <span id="conversion-modal-title">Promote to Client</span>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+                    <button
+                        onClick={onClose}
+                        className="hover:bg-white/20 p-1 rounded-lg transition-colors"
+                        aria-label="Close modal"
+                    >
                         <X size={20} />
                     </button>
                 </div>
 
                 <div className="p-6 space-y-4">
-                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                    <div id="conversion-modal-description" className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
                         <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-1">Converting Prospect</p>
                         <h3 className="text-lg font-bold text-slate-900">{leadCompany}</h3>
                         <p className="text-sm text-slate-500">{leadName}</p>

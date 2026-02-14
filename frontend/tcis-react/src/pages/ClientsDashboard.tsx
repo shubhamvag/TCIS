@@ -11,10 +11,12 @@ import type { ExpansionTarget } from "../components/ExpansionTargets";
 import { exportToCSV } from "../utils/ExportUtility";
 import { ClientCreationModal } from "../components/ClientCreationModal";
 import { CardSkeleton } from "../components/ui/skeletons/CardSkeleton";
+import { QueryErrorState } from "../components/ui/QueryErrorState";
+import { EmptyState } from "../components/ui/EmptyState";
 import type { Client } from "../api/types";
 
 export default function ClientsDashboard() {
-    const { data: rawClients, isLoading, refetch } = useClients();
+    const { data: rawClients, isLoading, error, refetch } = useClients();
     const filters = useAppStore((state) => state.filters);
     const resetFilters = useAppStore((state) => state.resetFilters);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -135,7 +137,28 @@ export default function ClientsDashboard() {
                 </div>
             </div>
 
-            {/* Metrics Section */}
+            {/* Error State */}
+            {error && (
+                <QueryErrorState
+                    error={error as Error}
+                    onRetry={() => refetch()}
+                />
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !error && clients.length === 0 && (
+                <EmptyState
+                    icon={Building}
+                    title="No clients found"
+                    description="No clients match your current filters. Try adjusting your search criteria or add a new client to get started."
+                    action={{
+                        label: "Add New Client",
+                        onClick: () => setIsCreateOpen(true)
+                    }}
+                />
+            )}
+
+            {/* Main Content Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading ? (
                     <>

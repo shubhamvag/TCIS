@@ -4,6 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { FormInput } from "./ui/FormInput";
+import { useFocusTrap } from "../hooks/useFocusTrap";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 
 const clientSchema = z.object({
     company: z.string().min(1, "Company name is required"),
@@ -33,9 +35,11 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
         register,
         handleSubmit,
         reset,
-        formState: { errors, isSubmitting },
+        formState: { errors, isSubmitting, touchedFields },
     } = useForm<ClientFormData>({
         resolver: zodResolver(clientSchema) as any,
+        mode: 'onBlur',
+        reValidateMode: 'onChange',
         defaultValues: {
             company: "",
             name: "",
@@ -52,6 +56,10 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
         },
     });
 
+    // Accessibility hooks
+    const modalRef = useFocusTrap(isOpen);
+    useEscapeKey(isOpen, onClose);
+
     if (!isOpen) return null;
 
     const onSubmit = async (data: ClientFormData) => {
@@ -67,24 +75,39 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                ref={modalRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="client-modal-title"
+                aria-describedby="client-modal-description"
+                className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <header className="bg-emerald-600 px-8 py-6 flex items-center justify-between text-white">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-white/20 rounded-xl">
                             <UserCheck size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold">Direct Client Boarding</h2>
-                            <p className="text-emerald-100 text-xs">Instantly add an existing customer to the intelligence suite.</p>
+                            <h2 id="client-modal-title" className="text-xl font-bold">Client Onboarding</h2>
+                            <p id="client-modal-description" className="text-emerald-100 text-xs">Register a new client account into the system.</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-xl transition-colors">
+                    <button
+                        onClick={onClose}
+                        className="hover:bg-white/20 p-2 rounded-xl transition-colors"
+                        aria-label="Close modal"
+                    >
                         <X size={20} />
                     </button>
                 </header>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+                <form id="client-form" onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Company Details */}
                         <div className="space-y-4">
@@ -94,6 +117,7 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                                 label={<><Building2 size={14} className="text-emerald-500" /> Company Name *</>}
                                 placeholder="e.g. Meta Corp"
                                 error={errors.company}
+                                showSuccess={touchedFields.company && !errors.company}
                                 {...register("company")}
                                 className="focus:ring-emerald-500/20 focus:border-emerald-500"
                             />
@@ -133,6 +157,7 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                                 label="Account Manager"
                                 placeholder="Employee Name"
                                 error={errors.account_manager}
+                                showSuccess={touchedFields.account_manager && !errors.account_manager}
                                 {...register("account_manager")}
                                 className="focus:ring-emerald-500/20 focus:border-emerald-500"
                             />
@@ -141,6 +166,7 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                                 label={<><CreditCard size={14} className="text-emerald-500" /> Existing Products</>}
                                 placeholder="e.g. Tally Prime, GST"
                                 error={errors.existing_products}
+                                showSuccess={touchedFields.existing_products && !errors.existing_products}
                                 {...register("existing_products")}
                                 className="focus:ring-emerald-500/20 focus:border-emerald-500"
                             />
@@ -148,7 +174,31 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                        {/* Information Mapping */}
+                        {/* Primary Contact */}
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Primary Contact</h3>
+
+                            <FormInput
+                                label="Contact Name *"
+                                placeholder="Full name"
+                                error={errors.name}
+                                showSuccess={touchedFields.name && !errors.name}
+                                {...register("name")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
+
+                            <FormInput
+                                label="Email"
+                                type="email"
+                                placeholder="contact@company.com"
+                                error={errors.email}
+                                showSuccess={touchedFields.email && !errors.email}
+                                {...register("email")}
+                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
+                            />
+                        </div>
+
+                        {/* Location Profile */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Location Profile</h3>
                             <div className="grid grid-cols-2 gap-4">
@@ -168,20 +218,10 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                                 />
                             </div>
                         </div>
-
-                        {/* Primary Contact */}
-                        <div className="space-y-4">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Client Admin</h3>
-                            <FormInput
-                                label={<><Briefcase size={14} className="text-emerald-500" /> Primary Contact Name *</>}
-                                placeholder="Full Name"
-                                error={errors.name}
-                                {...register("name")}
-                                className="focus:ring-emerald-500/20 focus:border-emerald-500"
-                            />
-                        </div>
                     </div>
+                </form>
 
+                <div className="p-8 pt-0">
                     <div className="pt-6 flex gap-4 border-t border-slate-100">
                         <button
                             type="button"
@@ -191,19 +231,20 @@ export function ClientCreationModal({ isOpen, onClose, onSuccess }: ClientCreati
                             Cancel
                         </button>
                         <button
-                            disabled={isSubmitting}
                             type="submit"
-                            className="px-8 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center gap-2 disabled:opacity-50"
+                            form="client-form"
+                            disabled={isSubmitting}
+                            className="px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                         >
-                            {isSubmitting ? "Onboarding..." : (
+                            {isSubmitting ? "Saving..." : (
                                 <>
-                                    <Save size={18} /> Save Client Record
+                                    <Save size={16} /> Save Client
                                 </>
                             )}
                         </button>
                     </div>
-                </form>
-            </div>
-        </div>
+                </div>
+            </div >
+        </div >
     );
 }
